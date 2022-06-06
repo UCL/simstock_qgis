@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/plugins/Simstock_QGIS" >
+        <file>icon.png</file>
+    </qresource>
+</RCC>
