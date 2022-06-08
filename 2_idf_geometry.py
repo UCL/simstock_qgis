@@ -6,14 +6,23 @@ from ast import literal_eval
 from shapely.wkt import loads
 from eppy.modeleditor import IDF
 from time import time, localtime, strftime
-from shapely.geometry import LineString
+from shapely.geometry import LineString, MultiLineString
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("datafile", help="provide a pre-processed file")
+parser.add_argument("-b", "--builtisland", action="store_true",
+                    help="whether to split built islands or not")
+args = parser.parse_args()
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
 IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
 ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
-input_data = os.path.join(ROOT_DIR, 'sa_preprocessed.csv')
+datafile = args.datafile
+datafilename = datafile[:-17]
+input_data = os.path.join(ROOT_DIR, datafile)
+BI_IDF_DIR = os.path.join(IDF_DIR, '{}_bi_idfs'.format(datafilename))
 
 # Do not place window if the wall width is less than this number
 min_avail_width_for_window = 1
@@ -35,67 +44,92 @@ def main():
     IDF.setiddname(iddfile)
     idf = IDF(ep_basic_settings)
 
-    # Change the name filed of the building object
-    building_object = idf.idfobjects['BUILDING'][0]
-    building_object.Name = 'sa_test'
-
     # Load input data (preprocessing outputs)
     df = pd.read_csv(input_data)
+    
+    # Function which creates the idf(s)
+    def createidfs(df, mode):
+    
+        # Move all objects towards origins
+        origin = loads(df['sa_polygon'].iloc[0])
+        origin = list(origin.exterior.coords[0])
+        origin.append(0)
 
-    # Move all objects towards origins
-    origin = loads(df['sa_polygon'].iloc[0])
-    origin = list(origin.exterior.coords[0])
-    origin.append(0)
+        # Shading volumes converted to shading objects
+        shading_df = df.loc[df['shading'] == True]
+        shading_df.apply(shading_volumes, args=(df, idf, origin,), axis=1)
 
-    # Shading volumes converted to shading objects
-    shading_df = df.loc[df['shading'] == True]
-    shading_df.apply(shading_volumes, args=(df, idf, origin,), axis=1)
+        # Polygons with zones converted to thermal zones based on floor number
+        zones_df = df.loc[df['shading'] == False]
+        zones_df.apply(thermal_zones, args=(df, idf, origin,), axis=1)
 
-    # Polygons with zones converted to thermal zones based on floor number
-    zones_df = df.loc[df['shading'] == False]
-    zones_df.apply(thermal_zones, args=(df, idf, origin,), axis=1)
+        # Extract names of thermal zones:
+        zones = idf.idfobjects['ZONE']
+        zone_names = list()
+        for zone in zones:
+            zone_names.append(zone.Name)
 
-    # Extract names of thermal zones:
-    zones = idf.idfobjects['ZONE']
-    zone_names = list()
-    for zone in zones:
-        zone_names.append(zone.Name)
+        # Create a 'Dwell' zone list with all thermal zones. "Dwell" apears
+        # in all objects which reffer to all zones (thermostat, people, etc.)
+        idf.newidfobject('ZONELIST', Name='Dwell')
+        objects = idf.idfobjects['ZONELIST'][-1]
+        for i, zone in enumerate(zone_names):
+            exec('objects.Zone_%s_Name = zone' % (i + 1))
 
-    # Create a 'Dwell' zone list with all thermal zones. "Dwell" apears
-    # in all objects which reffer to all zones (thermostat, people, etc.)
-    idf.newidfobject('ZONELIST', Name='Dwell')
-    objects = idf.idfobjects['ZONELIST'][-1]
-    for i, zone in enumerate(zone_names):
-        exec('objects.Zone_%s_Name = zone' % (i + 1))
+        # Ideal loads system
+        for zone in zone_names:
+            system_name = '{}_HVAC'.format(zone)
+            eq_name = '{}_Eq'.format(zone)
+            supp_air_node = '{}_supply'.format(zone)
+            air_node = '{}_air_node'.format(zone)
+            ret_air_node = '{}_return'.format(zone)
 
-    # Ideal loads system
-    for zone in zone_names:
-        system_name = '{}_HVAC'.format(zone)
-        eq_name = '{}_Eq'.format(zone)
-        supp_air_node = '{}_supply'.format(zone)
-        air_node = '{}_air_node'.format(zone)
-        ret_air_node = '{}_return'.format(zone)
+            idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
+                                Name=system_name,
+                                Zone_Supply_Air_Node_Name=supp_air_node,
+                                Dehumidification_Control_Type='None')
 
-        idf.newidfobject('ZONEHVAC:IDEALLOADSAIRSYSTEM',
-                            Name=system_name,
-                            Zone_Supply_Air_Node_Name=supp_air_node,
-                            Dehumidification_Control_Type='None')
+            idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
+                                Name=eq_name,
+                                Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
+                                Zone_Equipment_1_Name=system_name,
+                                Zone_Equipment_1_Cooling_Sequence=1,
+                                Zone_Equipment_1_Heating_or_NoLoad_Sequence=1)
 
-        idf.newidfobject('ZONEHVAC:EQUIPMENTLIST',
-                            Name=eq_name,
-                            Zone_Equipment_1_Object_Type='ZONEHVAC:IDEALLOADSAIRSYSTEM',
-                            Zone_Equipment_1_Name=system_name,
-                            Zone_Equipment_1_Cooling_Sequence=1,
-                            Zone_Equipment_1_Heating_or_NoLoad_Sequence=1)
+            idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
+                                Zone_Name=zone,
+                                Zone_Conditioning_Equipment_List_Name=eq_name,
+                                Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
+                                Zone_Air_Node_Name=air_node,
+                                Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
+        
+        if mode == "single":
+            idf.saveas(os.path.join(IDF_DIR, '{}.idf'.format(datafilename)))
+        elif mode == "bi":
+            idf.saveas(os.path.join(BI_IDF_DIR, '{}.idf'.format(bi)))
 
-        idf.newidfobject('ZONEHVAC:EQUIPMENTCONNECTIONS',
-                            Zone_Name=zone,
-                            Zone_Conditioning_Equipment_List_Name=eq_name,
-                            Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
-                            Zone_Air_Node_Name=air_node,
-                            Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
+    # Check whether in built island mode and create idf(s) accordingly
+    if args.builtisland:
+        print("Splitting output data into built islands")
+        os.makedirs(BI_IDF_DIR, exist_ok=True)
+        bi_list = df['bi'].unique().tolist()
+        
+        for bi in bi_list:
+            idf = IDF(ep_basic_settings)
+            # Change the name field of the building object
+            building_object = idf.idfobjects['BUILDING'][0]
+            building_object.Name = bi
+            
+            bi_df = df[df['bi'] == bi]
+            createidfs(bi_df, "bi")
+            
+    else:
+        # Change the name field of the building object
+        building_object = idf.idfobjects['BUILDING'][0]
+        building_object.Name = datafilename
 
-    idf.saveas(os.path.join(IDF_DIR, '{}.idf'.format('sa_test')))
+        createidfs(df, "single")
+        
     pt('##### idf_geometry created in:', start)
 
 # END OF MAIN  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
