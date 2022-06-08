@@ -1,15 +1,21 @@
 import os
 import pandas as pd
 from ast import literal_eval
-from shapely.ops import unary_union
+from shapely.ops import unary_union, linemerge
 from shapely.wkt import loads, dumps
 from time import time, localtime, strftime
-from shapely.geometry import Polygon, LineString, MultiLineString
+from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing
+import geopandas as gpd
+import argparse
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 tolerance = 0.1  # minimum allowed distance between 2 coordinates [m]
+
+parser = argparse.ArgumentParser()
+parser.add_argument("datafile", help="provide a file")
+args = parser.parse_args()
 
 
 def main():
@@ -20,8 +26,9 @@ def main():
           '- {} start time'.format(os.path.basename(__file__)), flush=True)
 
     # Load the raw data into pandas dataframe
-    df = pd.read_csv(os.path.join(ROOT_DIR, 'sa_data.csv'))
-
+    datafile = args.datafile
+    df = pd.read_csv(os.path.join(ROOT_DIR, datafile))
+    
     # Test polygons for validity and coordinates direction
     df['sa_reverse_coordinates'] = False
     df = polygon_testing(df)
@@ -54,14 +61,47 @@ def main():
     df = polygon_topology(df, 'sa_collinear_touching',
                           'sa_collinear_intersect')
 
+    # Adds a column denoting built islands if applicable
+    newdf = bi_adj(df)
+    
     # save preprocessed file
-    df.to_csv(os.path.join(ROOT_DIR, 'sa_preprocessed.csv'), index=False)
+    outputfilename = datafile[:-4] + "_preprocessed.csv"
+    newdf.to_csv(os.path.join(ROOT_DIR, outputfilename), index=False)
 
     pt('##### preprocessing completed in:', start)
 
 
 # END OF MAIN  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+def bi_adj(df):
+    df['polygon'] = df['polygon'].apply(loads)
+    gdf = gpd.GeoDataFrame(df, geometry='polygon')
+    polygon_union = gdf.polygon.unary_union
+
+    if polygon_union.type == "MultiPolygon":
+        for i, bi in enumerate(polygon_union):
+            for index, row in gdf.iterrows():
+                if row['polygon'].within(bi):
+                    gdf.at[index, 'bi'] = 'bi_{}'.format(i+1)
+
+        for index, row in gdf.iterrows():
+            touching = gdf[gdf.polygon.touches(row['polygon'])]
+            adj_checked = []
+            for i, building in touching.iterrows():
+                    if row['polygon'].intersection(building['polygon']).type in ["LineString", "MultiLineString"]:
+                        adj_checked.append(building['osgb'])
+            gdf.at[index, "adjacent"] = str(adj_checked)
+            
+        for i, row in gdf.iterrows():
+            if row['sa_collinear_touching'] != row['adjacent']:
+                sys.exit("built island mismatch")
+                
+        modal_bi = gdf.bi.mode().values
+        modal_bi_num = sum(gdf.bi.isin([modal_bi[0]]).values)
+        print("The BI(s) with the most buildings: %s with %s buildings" % (modal_bi, modal_bi_num))
+        return gdf
+    else:
+        return gdf
 
 def pt(printout, pst):
     pft = time()
