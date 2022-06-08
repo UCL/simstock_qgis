@@ -37,6 +37,7 @@ import os.path
 import venv
 import subprocess
 import pandas as pd
+import platform
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -246,6 +247,7 @@ class SimstockQGIS:
         # show the dialog
         self.dlg.show()
         
+        # Check if the initial setup button was clicked and run function if so
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
         
         # Run the dialog event loop
@@ -308,3 +310,20 @@ class SimstockQGIS:
             first.main()
             second.main()
             
+            # Run idfs (to be made into a separate button)
+            EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
+            idf_dir = os.path.join(self.plugin_dir, "idf_files")
+            epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+            files = os.scandir(os.path.abspath(idf_dir))
+            idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
+            print(idf_files)
+            output_dir = os.path.join(idf_dir, "output")
+
+            # Find the computer's operating system and set path to E+ idd file
+            system = platform.system().lower()
+            if system in ['windows', 'linux', 'darwin']:
+                energyplusexe = os.path.join(EP_DIR, 'ep8.9_{}/energyplus'.format(system))
+            print(energyplusexe)
+            
+            for idf_file in idf_files:
+                subprocess.run([energyplusexe, '-r','-d', output_dir,'-w', epw_file, idf_file])
