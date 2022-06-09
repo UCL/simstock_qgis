@@ -73,9 +73,14 @@ def bi_adj(df):
 
     if polygon_union.type == "MultiPolygon":
         for i, bi in enumerate(polygon_union):
+            # Get a unique name for the BI which is based on a point
+            # within the BI so that it doesn't change if new areas are lassoed
+            rep_point = bi.representative_point()
+            bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
+            bi_name = bi_name.replace(".", "-") #replace dots with dashes for filename compatibility
             for index, row in gdf.iterrows():
                 if row['polygon'].within(bi):
-                    gdf.at[index, 'bi'] = 'bi_{}'.format(i+1)
+                    gdf.at[index, 'bi'] = bi_name
 
         for index, row in gdf.iterrows():
             touching = gdf[gdf.polygon.touches(row['polygon'])]
