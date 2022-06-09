@@ -94,7 +94,8 @@ def bi_adj(df):
             
         for i, row in gdf.iterrows():
             if row['sa_collinear_touching'] != row['adjacent']:
-                sys.exit("built island mismatch")
+                raise RuntimeError("built island mismatch")
+        # Can drop the adjacent column at this point
                 
         modal_bi = gdf.bi.mode().values
         modal_bi_num = sum(gdf.bi.isin([modal_bi[0]]).values)
