@@ -5,6 +5,7 @@ from shapely.ops import unary_union, linemerge
 from shapely.wkt import loads, dumps
 from time import time, localtime, strftime
 from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing
+import geopandas as gpd
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -54,14 +55,47 @@ def main():
     df = polygon_topology(df, 'sa_collinear_touching',
                           'sa_collinear_intersect')
 
+    # Adds a column denoting built islands if applicable
+    newdf = bi_adj(df)
+    
     # save preprocessed file
-    df.to_csv(os.path.join(ROOT_DIR, 'sa_preprocessed.csv'), index=False)
+    newdf.to_csv(os.path.join(ROOT_DIR, 'sa_preprocessed.csv'), index=False)
 
     pt('##### preprocessing completed in:', start)
 
 
 # END OF MAIN  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+def bi_adj(df):
+    df['polygon'] = df['polygon'].apply(loads)
+    gdf = gpd.GeoDataFrame(df, geometry='polygon')
+    polygon_union = gdf.polygon.unary_union
+
+    if polygon_union.type == "MultiPolygon":
+        for i, bi in enumerate(polygon_union):
+            for index, row in gdf.iterrows():
+                if row['polygon'].within(bi):
+                    gdf.at[index, 'bi'] = 'bi_{}'.format(i+1)
+
+        for index, row in gdf.iterrows():
+            touching = gdf[gdf.polygon.touches(row['polygon'])]
+            adj_checked = []
+            for i, building in touching.iterrows():
+                    if row['polygon'].intersection(building['polygon']).type in ["LineString", "MultiLineString"]:
+                        adj_checked.append(building['osgb'])
+            gdf.at[index, "adjacent"] = str(adj_checked)
+            
+        for i, row in gdf.iterrows():
+            if row['sa_collinear_touching'] != row['adjacent']:
+                raise RuntimeError("built island mismatch")
+        # Can drop the adjacent column at this point
+                
+        modal_bi = gdf.bi.mode().values
+        modal_bi_num = sum(gdf.bi.isin([modal_bi[0]]).values)
+        print("The BI(s) with the most buildings: %s with %s buildings" % (modal_bi, modal_bi_num))
+        return gdf
+    else:
+        return gdf
 
 def pt(printout, pst):
     pft = time()
