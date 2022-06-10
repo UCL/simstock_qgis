@@ -40,6 +40,8 @@ import pandas as pd
 import platform
 import sys
 import multiprocessing as mp
+import qgis.utils
+from qgis.core import Qgis
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -121,6 +123,7 @@ class SimstockQGIS:
         print("Eppy version: ", eppy.__version__)
         
         self.initial_setup_worked = True
+        qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
         print("Initial setup completed successfully. Please restart QGIS.")
         
 
@@ -310,14 +313,13 @@ class SimstockQGIS:
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
-            print("Running Simstock...")
+            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=3)
             first.main()
             second.main()
+            qgis.utils.iface.messageBar().pushMessage("Simstock finished", "Simstock has completed successfully. [Add more here]", level=Qgis.Success)
             
     def run_ep(self, idf_file):
-        #idf_file_name = os.path.basename(idf_file)
         output_dir = idf_file[:-4]
-        print(output_dir)
         subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
 
     def run_simulations(self):
@@ -339,6 +341,8 @@ class SimstockQGIS:
         #p.map(run_ep, idf_files)
         #p.close()
 
-        for i, idf_file in enumerate(self.idf_files[:3]):
+        qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
+        for i, idf_file in enumerate(self.idf_files):
             print(f"Starting simulation {i+1} of {len(self.idf_files)}")
             self.run_ep(idf_file)
+        qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
