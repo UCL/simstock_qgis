@@ -38,6 +38,8 @@ import venv
 import subprocess
 import pandas as pd
 import platform
+import sys
+import multiprocessing as mp
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -249,6 +251,9 @@ class SimstockQGIS:
         
         # Check if the initial setup button was clicked and run function if so
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
+
+        # Check if the run simulation button was clicked and run function if so
+        self.dlg.pbRunSim.clicked.connect(self.run_simulations)
         
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -300,7 +305,6 @@ class SimstockQGIS:
             data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
 
             # Update path to access Simstock scripts
-            import sys
             sys.path.insert(0, self.plugin_dir)
             
             # Import and run Simstock
@@ -310,20 +314,31 @@ class SimstockQGIS:
             first.main()
             second.main()
             
-            # Run idfs (to be made into a separate button)
-            EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-            idf_dir = os.path.join(self.plugin_dir, "idf_files")
-            epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
-            files = os.scandir(os.path.abspath(idf_dir))
-            idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
-            print(idf_files)
-            output_dir = os.path.join(idf_dir, "output")
+    def run_ep(self, idf_file):
+        #idf_file_name = os.path.basename(idf_file)
+        output_dir = idf_file[:-4]
+        print(output_dir)
+        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
 
-            # Find the computer's operating system and set path to E+ idd file
-            system = platform.system().lower()
-            if system in ['windows', 'linux', 'darwin']:
-                energyplusexe = os.path.join(EP_DIR, 'ep8.9_{}/energyplus'.format(system))
-            print(energyplusexe)
-            
-            for idf_file in idf_files:
-                subprocess.run([energyplusexe, '-r','-d', output_dir,'-w', epw_file, idf_file])
+    def run_simulations(self):
+        self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
+        idf_dir = os.path.join(self.plugin_dir, "idf_files")
+        self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+        files = os.scandir(os.path.abspath(idf_dir))
+        self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
+        #print(self.idf_files)
+        #self.output_dir = os.path.join(idf_dir, "output")
+
+        # Find the computer's operating system and find energyplus version
+        system = platform.system().lower()
+        if system in ['windows', 'linux', 'darwin']:
+            self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
+        #print(self.energyplusexe)
+
+        #p = mp.Pool()
+        #p.map(run_ep, idf_files)
+        #p.close()
+
+        for i, idf_file in enumerate(self.idf_files[:3]):
+            print(f"Starting simulation {i+1} of {len(self.idf_files)}")
+            self.run_ep(idf_file)
