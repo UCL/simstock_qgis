@@ -11,6 +11,7 @@ conda activate simstock
 ```
 conda install -c conda-forge pandas shapely
 pip install eppy
+pip install geopandas==0.9.0
 ```
 
 ## 1_preprocessing.py
