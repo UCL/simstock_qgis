@@ -5,7 +5,6 @@ from shapely.ops import unary_union, linemerge
 from shapely.wkt import loads, dumps
 from time import time, localtime, strftime
 from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing
-import geopandas as gpd
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -68,8 +67,10 @@ def main():
 
 def bi_adj(df):
     df['polygon'] = df['polygon'].apply(loads)
-    gdf = gpd.GeoDataFrame(df, geometry='polygon')
-    polygon_union = gdf.polygon.unary_union
+    #gdf = gpd.GeoDataFrame(df, geometry='polygon')
+    #polygon_union = gdf.polygon.unary_union
+    gdf = df.copy(deep=True) #recoded to avoid using geopandas
+    polygon_union = unary_union(gdf.polygon)
 
     if polygon_union.type == "MultiPolygon":
         for i, bi in enumerate(polygon_union):
@@ -82,17 +83,21 @@ def bi_adj(df):
                 if row['polygon'].within(bi):
                     gdf.at[index, 'bi'] = bi_name
 
-        for index, row in gdf.iterrows():
-            touching = gdf[gdf.polygon.touches(row['polygon'])]
-            adj_checked = []
-            for i, building in touching.iterrows():
-                    if row['polygon'].intersection(building['polygon']).type in ["LineString", "MultiLineString"]:
-                        adj_checked.append(building['osgb'])
-            gdf.at[index, "adjacent"] = str(adj_checked)
+        ### The following part just checks consistency against internal simstock
+        ### adjacent polygon calculations. Not necessary but nice to have. Needs
+        ### to be recoded without geopandas
+        
+        # for index, row in gdf.iterrows():
+        #     touching = gdf[gdf.polygon.touches(row['polygon'])]
+        #     adj_checked = []
+        #     for i, building in touching.iterrows():
+        #             if row['polygon'].intersection(building['polygon']).type in ["LineString", "MultiLineString"]:
+        #                 adj_checked.append(building['osgb'])
+        #     gdf.at[index, "adjacent"] = str(adj_checked)
             
-        for i, row in gdf.iterrows():
-            if row['sa_collinear_touching'] != row['adjacent']:
-                raise RuntimeError("built island mismatch")
+        # for i, row in gdf.iterrows():
+        #     if row['sa_collinear_touching'] != row['adjacent']:
+        #         raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
                 
         modal_bi = gdf.bi.mode().values
