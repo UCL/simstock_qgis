@@ -21,11 +21,11 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject #to get layers
+from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField #to get layers
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -313,10 +313,44 @@ class SimstockQGIS:
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
-            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=3)
-            first.main()
-            second.main()
+            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
+            #first.main()
+            #second.main()
             qgis.utils.iface.messageBar().pushMessage("Simstock finished", "Simstock has completed successfully. [Add more here]", level=Qgis.Success)
+            
+            
+            ### RESULTS HANDLING
+            # Change some of the features if necessary (probably not)
+            features[0].setAttribute(1, "text")
+            
+            # Create new layer in memory for the results
+            mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", "duplicated_layer", "memory")
+            mem_layer_data = mem_layer.dataProvider()
+            attr = selectedLayer.dataProvider().fields().toList()
+            
+            # Add new attribute for the results
+            new_attr = QgsField('results', QVariant.Int)
+            #for i in range(len(features)):
+            #    features[i].setAttribute('results', i)
+            attr.append(new_attr)
+            
+            # Add the attributes into the new layer and push it to QGIS
+            mem_layer_data.addAttributes(attr)
+            mem_layer.updateFields()
+            mem_layer_data.addFeatures(features)
+            QgsProject.instance().addMapLayer(mem_layer)
+            print(features[-1].attributes())
+
+            # Check the capabilities of the layer
+            #caps = mem_layer.dataProvider().capabilities()
+            #if caps & QgsVectorDataProvider.AddFeatures:
+            #    print("can")
+            
+            # Refresh the map if necessary
+            if qgis.utils.iface.mapCanvas().isCachingEnabled():
+                selectedLayer.triggerRepaint()
+            else:
+                qgis.utils.iface.mapCanvas().refresh()
             
     def run_ep(self, idf_file):
         output_dir = idf_file[:-4]
