@@ -25,7 +25,7 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField #to get layers
+from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField, QgsFields #to get layers
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -326,12 +326,18 @@ class SimstockQGIS:
             # Create new layer in memory for the results
             mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", "duplicated_layer", "memory")
             mem_layer_data = mem_layer.dataProvider()
-            attr = selectedLayer.dataProvider().fields().toList()
+            attr = selectedLayer.dataProvider().fields().toList() # QgsField type
+            fields = selectedLayer.fields() # QgsFields type
             
             # Add new attribute for the results
             new_attr = QgsField('results', QVariant.Int)
-            #for i in range(len(features)):
-            #    features[i].setAttribute('results', i)
+            fields.append(new_attr)
+            
+            for i in range(len(features)):
+                features[i].setFields(fields)
+            
+            for i in range(len(features)):
+                features[i].setAttribute('results', i)
             attr.append(new_attr)
             
             # Add the attributes into the new layer and push it to QGIS
@@ -339,7 +345,7 @@ class SimstockQGIS:
             mem_layer.updateFields()
             mem_layer_data.addFeatures(features)
             QgsProject.instance().addMapLayer(mem_layer)
-            print(features[-1].attributes())
+            print(features[-1].fields())
 
             # Check the capabilities of the layer
             #caps = mem_layer.dataProvider().capabilities()
