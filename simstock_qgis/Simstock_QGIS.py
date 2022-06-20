@@ -80,6 +80,7 @@ class SimstockQGIS:
         
         #initial setup checker
         self.initial_setup_worked = None
+        self.simulation_ran = None
         
     
     def initial_setup(self):
@@ -279,10 +280,10 @@ class SimstockQGIS:
             #subprocess.run(r"python -m pip show pandas >> C:\Users\biscu\Documents\phd\Internship\pandas-upgraded.txt", shell=True)
             
             # Get layer, check exists and extract features
-            selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
-            if selectedLayer is None:
+            self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
+            if self.selectedLayer is None:
                 raise RuntimeError("Layer does not exist.")
-            features = [feature for feature in selectedLayer.getFeatures()]
+            self.features = [feature for feature in self.selectedLayer.getFeatures()]
             
             # Path to qgz file
             path_to_file = QgsProject.instance().absoluteFilePath()
@@ -291,7 +292,7 @@ class SimstockQGIS:
             dirpath = self.dlg.mQgsFileWidget.filePath()
             
             # Extract geometry data from layer as polygons
-            polygon = [feature.geometry().asWkt() for feature in features]
+            polygon = [feature.geometry().asWkt() for feature in self.features]
             
             # Extract all other required Simstock data from layer
             headings = ["polygon", "osgb", "shading", "height", "wwr", "nofloors", "construction"]
@@ -299,7 +300,7 @@ class SimstockQGIS:
             dfdict[headings[0]] = polygon
             for heading in headings[1:]:
                 try:
-                    dfdict[heading] = [feature[heading] for feature in features]
+                    dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
                     raise Exception("Attribute '%s' was not found in the attribute table. Check that it is present and spelled correctly and try again." % heading)
             data = pd.DataFrame(dfdict)
@@ -314,38 +315,76 @@ class SimstockQGIS:
             import simstockone as first
             import simstocktwo as second
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
-            #first.main()
-            #second.main()
+            first.main()
+            second.main()
             qgis.utils.iface.messageBar().pushMessage("Simstock finished", "Simstock has completed successfully. [Add more here]", level=Qgis.Success)
+
             
+    def run_ep(self, idf_file):
+        output_dir = idf_file[:-4]
+        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
+
+    def run_simulations(self):
+        if self.simulation_ran is not None:
+            if self.simulation_ran:
+                print("Already run")
+        else:
+            self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
+            idf_dir = os.path.join(self.plugin_dir, "idf_files")
+            self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+            files = os.scandir(os.path.abspath(idf_dir))
+            self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
+            #print(self.idf_files)
+            #self.output_dir = os.path.join(idf_dir, "output")
+
+            # Find the computer's operating system and find energyplus version
+            system = platform.system().lower()
+            if system in ['windows', 'linux', 'darwin']:
+                self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
+            #print(self.energyplusexe)
+
+            #p = mp.Pool()
+            #p.map(run_ep, idf_files)
+            #p.close()
+
+            self.idf_files = self.idf_files[:3]
+            qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
+            for i, idf_file in enumerate(self.idf_files):
+                print(f"Starting simulation {i+1} of {len(self.idf_files)}")
+                self.run_ep(idf_file)
+            qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
             
             ### RESULTS HANDLING
             # Change some of the features if necessary (probably not)
-            features[0].setAttribute(1, "text")
+            #self.features[0].setAttribute(1, "text")
             
             # Create new layer in memory for the results
-            mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", "duplicated_layer", "memory")
+            mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", "results_layer", "memory")
             mem_layer_data = mem_layer.dataProvider()
-            attr = selectedLayer.dataProvider().fields().toList() # QgsField type
-            fields = selectedLayer.fields() # QgsFields type
+            attr = self.selectedLayer.dataProvider().fields().toList() # QgsField type
+            fields = self.selectedLayer.fields() # QgsFields type
             
             # Add new attribute for the results
-            new_attr = QgsField('results', QVariant.Int)
+            new_attr = QgsField('results', QVariant.Double)
             fields.append(new_attr)
-            
-            for i in range(len(features)):
-                features[i].setFields(fields)
-            
-            for i in range(len(features)):
-                features[i].setAttribute('results', i)
             attr.append(new_attr)
+            
+            # Update the features to gain the new fields object
+            for i in range(len(self.features)):
+                self.features[i].setFields(fields, initAttributes=False)
+            
+            # Set the attribute values themselves
+            for i in range(len(self.features)):
+                attrs = self.features[i].attributes()
+                attrs.append(2.5235245)
+                self.features[i].setAttributes(attrs)
+                #features[i].setAttribute('results', "hi")
             
             # Add the attributes into the new layer and push it to QGIS
             mem_layer_data.addAttributes(attr)
             mem_layer.updateFields()
-            mem_layer_data.addFeatures(features)
+            mem_layer_data.addFeatures(self.features)
             QgsProject.instance().addMapLayer(mem_layer)
-            print(features[-1].fields())
 
             # Check the capabilities of the layer
             #caps = mem_layer.dataProvider().capabilities()
@@ -354,35 +393,8 @@ class SimstockQGIS:
             
             # Refresh the map if necessary
             if qgis.utils.iface.mapCanvas().isCachingEnabled():
-                selectedLayer.triggerRepaint()
+                self.selectedLayer.triggerRepaint()
             else:
                 qgis.utils.iface.mapCanvas().refresh()
-            
-    def run_ep(self, idf_file):
-        output_dir = idf_file[:-4]
-        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
-
-    def run_simulations(self):
-        self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-        idf_dir = os.path.join(self.plugin_dir, "idf_files")
-        self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
-        files = os.scandir(os.path.abspath(idf_dir))
-        self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
-        #print(self.idf_files)
-        #self.output_dir = os.path.join(idf_dir, "output")
-
-        # Find the computer's operating system and find energyplus version
-        system = platform.system().lower()
-        if system in ['windows', 'linux', 'darwin']:
-            self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
-        #print(self.energyplusexe)
-
-        #p = mp.Pool()
-        #p.map(run_ep, idf_files)
-        #p.close()
-
-        qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
-        for i, idf_file in enumerate(self.idf_files):
-            print(f"Starting simulation {i+1} of {len(self.idf_files)}")
-            self.run_ep(idf_file)
-        qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
+                
+            self.simulation_ran = True
