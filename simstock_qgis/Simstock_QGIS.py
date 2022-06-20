@@ -58,6 +58,10 @@ class SimstockQGIS:
         self.iface = iface
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
+        
+        # Update path to access Simstock scripts
+        sys.path.insert(0, self.plugin_dir)
+        
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
@@ -126,7 +130,6 @@ class SimstockQGIS:
         self.initial_setup_worked = True
         qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
         print("Initial setup completed successfully. Please restart QGIS.")
-        
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -307,9 +310,6 @@ class SimstockQGIS:
             
             # Save data as csv for Simstock to read
             data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
-
-            # Update path to access Simstock scripts
-            sys.path.insert(0, self.plugin_dir)
             
             # Import and run Simstock
             import simstockone as first
@@ -325,6 +325,7 @@ class SimstockQGIS:
         subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
 
     def run_simulations(self):
+        # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
         if self.simulation_ran is not None:
             if self.simulation_ran:
                 print("Already run")
@@ -334,24 +335,22 @@ class SimstockQGIS:
             self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
             files = os.scandir(os.path.abspath(idf_dir))
             self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
-            #print(self.idf_files)
-            #self.output_dir = os.path.join(idf_dir, "output")
 
             # Find the computer's operating system and find energyplus version
             system = platform.system().lower()
             if system in ['windows', 'linux', 'darwin']:
                 self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
-            #print(self.energyplusexe)
-
-            #p = mp.Pool()
-            #p.map(run_ep, idf_files)
-            #p.close()
+            #print(self.energyplusexe) #TODO: test on Mac/Linux
 
             self.idf_files = self.idf_files[:3]
             qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
-            for i, idf_file in enumerate(self.idf_files):
-                print(f"Starting simulation {i+1} of {len(self.idf_files)}")
-                self.run_ep(idf_file)
+            #for i, idf_file in enumerate(self.idf_files):
+            #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
+            #    self.run_ep(idf_file)
+            multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
+            out = subprocess.run("python %s" % multiprocessingscript, shell=True, capture_output=True, text=True)
+            with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
+                f.write(str(out) + "\n")
             qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
             
             ### RESULTS HANDLING
