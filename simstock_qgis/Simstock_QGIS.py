@@ -136,19 +136,22 @@ class SimstockQGIS:
                 self.initial_tests.append("Chmod command failed.")
             
             # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
-            run_ep_test = subprocess.run("'%s'" % self.energyplusexe, shell=True, capture_output=True, text=True)
-            #print(run_ep_test)
+            shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
+            shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
+            run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', self.epw_file, shoebox_idf])
+            if not os.path.exists(os.path.join(shoebox_output, "eplusout.csv")):
+                self.initial_tests.append("EnergyPlus could not run.")
             
             # Test that the QGIS Python works via subprocess
             self.qgis_python_location = qgis_python_dir + "/bin/python3.8"
-            run_python_test = subprocess.run("'%s' '%s'" % (self.qgis_python_location, test_python), shell=True, capture_output=True, text=True)
+            run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
             
         if self.system == "windows":
             # Test that the QGIS Python works via subprocess
             self.qgis_python_location = qgis_python_dir + r"\python3"
-            run_python_test = subprocess.run("\"%s\" \"%s\"" % (self.qgis_python_location, test_python), shell=True, capture_output=True, text=True)
+            run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
         
