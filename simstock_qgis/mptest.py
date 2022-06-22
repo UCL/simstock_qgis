@@ -23,8 +23,8 @@ class EP_Run():
         output_dir = idf_file[:-4]
         subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
         
-    def run_ep_multi(self):
-        p = mp.Pool()
+    def run_ep_multi(self, cores):
+        p = mp.Pool(cores)
         p.map(self.run_ep, self.idf_files)
         p.close()
     
@@ -32,7 +32,7 @@ def main():
 
     #multisquare(cores)
     runner = EP_Run()
-    runner.run_ep_multi()
+    runner.run_ep_multi(8)
 
 if __name__ == '__main__':
     main()
