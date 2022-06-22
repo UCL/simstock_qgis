@@ -62,6 +62,10 @@ class SimstockQGIS:
         # Update path to access Simstock scripts
         sys.path.insert(0, self.plugin_dir)
         
+        # Update path to packaged eppy
+        eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
+        sys.path.append(eppy_dir)
+        
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
@@ -86,50 +90,75 @@ class SimstockQGIS:
         self.initial_setup_worked = None
         self.simulation_ran = None
         
+        # Startup E+ stuff
+        self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
+        idf_dir = os.path.join(self.plugin_dir, "idf_files")
+        self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+        files = os.scandir(os.path.abspath(idf_dir))
+        self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
+
+        # Find the computer's operating system and find energyplus version
+        self.system = platform.system().lower()
+        if self.system in ['windows', 'linux', 'darwin']:
+            self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
+        #print(self.energyplusexe) #TODO: test on Mac/Linux
+        
     
     def initial_setup(self):
         print("Initial setup button pressed")
+        
+        # Set up list to track success of each test
+        self.initial_tests = []
+        
+        # Module tests
+        print("Pandas version: ", pd.__version__)
         try:
             import eppy
+            print("Eppy version: ", eppy.__version__)
         except ImportError:
-            print("Installing Eppy...")
-            #subprocess.run(r"python -m pip install eppy==0.5.56", shell=True)
-            try:
-                print("Importing eppy...")
-                import eppy
-            except ImportError:
-                self.initial_setup_worked = False
-                raise ImportError("Pkg: Eppy could not be installed!")
+            self.initial_tests.append("Eppy failed to load.")
             
         try:
             import shapely
+            print("Shapely version: ", shapely.__version__)
         except ImportError:
-            print("Installing Shapely...")
-            #subprocess.run(r"python -m pip install shapely==1.7.1", shell=True)
-            try:
-                print("Importing shapely...")
-                import shapely
-            except ImportError:
-                self.initial_setup_worked = False
-                raise ImportError("Pkg: Shapely could not be installed!")
+            self.initial_tests.append("Shapely failed to load.")
             
-        if pd.__version__ < '1.3.0':
-            #subprocess.run(r"python -m pip install pandas==1.3.0", shell=True)
-            print("Updating Pandas...")
-        if shapely.__version__ < '1.7.1':
-            #subprocess.run(r"python -m pip install shapely==1.7.1", shell=True) #maybe leave this out
-            print("Updating Shapely...")
-        if eppy.__version__ < '0.5.56':
-            #subprocess.run(r"python -m pip install eppy==0.5.56", shell=True)
-            print("Updating Eppy...")
+        # Find QGIS Python location to override default Python in path        
+        test_python = os.path.join(self.plugin_dir, "test_python.py")
+        qgis_python_dir = sys.exec_prefix
         
-        print("Pandas version: ", pd.__version__)
-        print("Shapely version: ", shapely.__version__)
-        print("Eppy version: ", eppy.__version__)
+        if self.system == "darwin":
+            # Make E+ application executable
+            try:
+                chmod_cmd = subprocess.run("chmod +x '%s'" % self.energyplusexe, shell=True, check=True)
+            except subprocess.CalledProcessError:
+                self.initial_tests.append("Chmod command failed.")
+            
+            # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
+            run_ep_test = subprocess.run("'%s'" % self.energyplusexe, shell=True, capture_output=True, text=True)
+            #print(run_ep_test)
+            
+            # Test that the QGIS Python works via subprocess
+            self.qgis_python_location = qgis_python_dir + "/bin/python3.8"
+            run_python_test = subprocess.run("'%s' '%s'" % (self.qgis_python_location, test_python), shell=True, capture_output=True, text=True)
+            if run_python_test.stdout != "success\n":
+                self.initial_tests.append("Python could not be run.")
+            
+        if self.system == "windows":
+            # Test that the QGIS Python works via subprocess
+            self.qgis_python_location = qgis_python_dir + r"\python3"
+            run_python_test = subprocess.run("\"%s\" \"%s\"" % (self.qgis_python_location, test_python), shell=True, capture_output=True, text=True)
+            if run_python_test.stdout != "success\n":
+                self.initial_tests.append("Python could not be run.")
         
-        self.initial_setup_worked = True
-        qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
-        print("Initial setup completed successfully. Please restart QGIS.")
+        if len(self.initial_tests) != 0:
+            for error in self.initial_tests:
+                print("\n" + error + "\n")
+        else:
+            self.initial_setup_worked = True
+            qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
+            print("Initial setup completed successfully. Please restart QGIS.")
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -330,19 +359,6 @@ class SimstockQGIS:
             if self.simulation_ran:
                 print("Already run")
         else:
-            self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-            idf_dir = os.path.join(self.plugin_dir, "idf_files")
-            self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
-            files = os.scandir(os.path.abspath(idf_dir))
-            self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
-
-            # Find the computer's operating system and find energyplus version
-            system = platform.system().lower()
-            if system in ['windows', 'linux', 'darwin']:
-                self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
-            #print(self.energyplusexe) #TODO: test on Mac/Linux
-
-            self.idf_files = self.idf_files[:3]
             qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
             #for i, idf_file in enumerate(self.idf_files):
             #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
