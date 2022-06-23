@@ -101,7 +101,13 @@ class SimstockQGIS:
         self.system = platform.system().lower()
         if self.system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
-        #print(self.energyplusexe) #TODO: test on Mac/Linux
+        
+        # Locate QGIS Python, differs by OS
+        qgis_python_dir = sys.exec_prefix
+        if self.system == "windows":
+            self.qgis_python_location = qgis_python_dir + r"\python3"
+        if self.system == "darwin":
+            self.qgis_python_location = qgis_python_dir + "/bin/python3.8"
         
     
     def initial_setup(self):
@@ -126,7 +132,6 @@ class SimstockQGIS:
             
         # Find QGIS Python location to override default Python in path        
         test_python = os.path.join(self.plugin_dir, "test_python.py")
-        qgis_python_dir = sys.exec_prefix
         
         if self.system == "darwin":
             # Make E+ application executable
@@ -139,28 +144,28 @@ class SimstockQGIS:
             shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
             shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
             run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', self.epw_file, shoebox_idf])
-            if not os.path.exists(os.path.join(shoebox_output, "eplusout.csv")):
+            if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
                 self.initial_tests.append("EnergyPlus could not run.")
             
             # Test that the QGIS Python works via subprocess
-            self.qgis_python_location = qgis_python_dir + "/bin/python3.8"
             run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
             
         if self.system == "windows":
             # Test that the QGIS Python works via subprocess
-            self.qgis_python_location = qgis_python_dir + r"\python3"
             run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
         
         if len(self.initial_tests) != 0:
+            qgis.utils.iface.messageBar().pushMessage("Initial setup failed", "Some errors have occured - please check the Python console outputs.", level=Qgis.Critical, duration=5)
+            self.initial_setup_worked = False
             for error in self.initial_tests:
                 print("\n" + error + "\n")
         else:
             self.initial_setup_worked = True
-            qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
+            qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success, duration=5)
             print("Initial setup completed successfully. Please restart QGIS.")
 
     # noinspection PyMethodMayBeStatic
@@ -299,6 +304,19 @@ class SimstockQGIS:
         
         # See if OK was pressed
         if result:
+            pass
+            
+    def run_ep(self, idf_file):
+        output_dir = idf_file[:-4]
+        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
+
+    def run_simulations(self):
+        # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
+        if self.simulation_ran is not None:
+            if self.simulation_ran:
+                print("Already run")
+        else:
+            qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
             
             # Check if initial setup worked
             if self.initial_setup_worked is not None:
@@ -350,26 +368,17 @@ class SimstockQGIS:
             first.main()
             second.main()
             qgis.utils.iface.messageBar().pushMessage("Simstock finished", "Simstock has completed successfully. [Add more here]", level=Qgis.Success)
-
             
-    def run_ep(self, idf_file):
-        output_dir = idf_file[:-4]
-        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
-
-    def run_simulations(self):
-        # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
-        if self.simulation_ran is not None:
-            if self.simulation_ran:
-                print("Already run")
-        else:
-            qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
+            # Single core
             #for i, idf_file in enumerate(self.idf_files):
             #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
             #    self.run_ep(idf_file)
+            
+            # Parallel processing
             multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
-            out = subprocess.run("python %s" % multiprocessingscript, shell=True, capture_output=True, text=True)
-            with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-                f.write(str(out) + "\n")
+            out = subprocess.run([self.qgis_python_location, multiprocessingscript], capture_output=True, text=True)
+            #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
+            #    f.write(str(out) + "\n")
             qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
             
             ### RESULTS HANDLING
