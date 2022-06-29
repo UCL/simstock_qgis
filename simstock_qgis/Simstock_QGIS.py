@@ -42,6 +42,7 @@ import sys
 import multiprocessing as mp
 import qgis.utils
 from qgis.core import Qgis
+import time
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -88,7 +89,7 @@ class SimstockQGIS:
         
         #initial setup checker
         self.initial_setup_worked = None
-        self.simulation_ran = None
+        self.simulation_started = None
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
@@ -105,9 +106,9 @@ class SimstockQGIS:
         # Locate QGIS Python, differs by OS
         qgis_python_dir = sys.exec_prefix
         if self.system == "windows":
-            self.qgis_python_location = qgis_python_dir + r"\python3"
+            self.qgis_python_location = qgis_python_dir + r"\python"
         if self.system == "darwin":
-            self.qgis_python_location = qgis_python_dir + "/bin/python3.8"
+            self.qgis_python_location = qgis_python_dir + "/bin/python3"
         
     
     def initial_setup(self):
@@ -312,10 +313,13 @@ class SimstockQGIS:
 
     def run_simulations(self):
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
-        if self.simulation_ran is not None:
-            if self.simulation_ran:
-                print("Already run")
+        time_now = time.perf_counter()
+        
+        if self.simulation_started is not None and time_now - self.simulation_started < 5:
+            print("Button signal sent twice in quick succession - ignoring.")
+            
         else:
+            self.simulation_started = time.perf_counter()
             qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
             
             # Check if initial setup worked
@@ -336,6 +340,8 @@ class SimstockQGIS:
             self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
             if self.selectedLayer is None:
                 raise RuntimeError("Layer does not exist.")
+            if not isinstance(self.selectedLayer, QgsVectorLayer):
+                raise TypeError("Simstock expects a Vector Layer as input.")
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
             
             # Path to qgz file
@@ -424,4 +430,3 @@ class SimstockQGIS:
             else:
                 qgis.utils.iface.mapCanvas().refresh()
                 
-            self.simulation_ran = True
