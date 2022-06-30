@@ -408,21 +408,22 @@ class SimstockQGIS:
             attr = self.selectedLayer.dataProvider().fields().toList() # QgsField type
             fields = self.selectedLayer.fields() # QgsFields type
             
-            # Add new attribute for the results
-            new_attr = QgsField('results', QVariant.Double)
-            fields.append(new_attr)
-            attr.append(new_attr)
-            
-            # Update the features to gain the new fields object
-            for i in range(len(self.features)):
-                self.features[i].setFields(fields, initAttributes=False)
+            # Add new attributes for the results
+            new_attrs = [QgsField('bi_ref', QVariant.String), QgsField('results', QVariant.Double)]
+            for new_attr in new_attrs:
+                fields.append(new_attr)
+            attr.extend(new_attrs)
             
             # Set the attribute values themselves
             for i in range(len(self.features)):
+                #update the feature to gain the new fields object
+                self.features[i].setFields(fields, initAttributes=False)
+                #grab the attributes from this feature
                 attrs = self.features[i].attributes()
+                #append the new values
+                attrs.append("bi_ref_here")
                 attrs.append(2.5235245)
                 self.features[i].setAttributes(attrs)
-                #features[i].setAttribute('results', "hi")
             
             # Add the attributes into the new layer and push it to QGIS
             mem_layer_data.addAttributes(attr)
