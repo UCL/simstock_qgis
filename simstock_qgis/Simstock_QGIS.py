@@ -377,6 +377,7 @@ class SimstockQGIS:
             import simstockone as first
             import simstocktwo as second
             first.main()
+            preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
             second.main()
             
             
@@ -399,7 +400,7 @@ class SimstockQGIS:
             
             
             ### RESULTS HANDLING
-            # Change some of the features if necessary (probably not)
+            # Change some of the existing attributes if necessary (probably not)
             #self.features[0].setAttribute(1, "text")
             
             # Create new layer in memory for the results
@@ -418,10 +419,15 @@ class SimstockQGIS:
             for i in range(len(self.features)):
                 #update the feature to gain the new fields object
                 self.features[i].setFields(fields, initAttributes=False)
+                
                 #grab the attributes from this feature
                 attrs = self.features[i].attributes()
+                
                 #append the new values
-                attrs.append("bi_ref_here")
+                osgb = self.features[i].attribute("osgb")
+                bi_ref = preprocessed_df.loc[preprocessed_df["osgb"] == osgb, "bi"].values[0]
+                attrs.append(bi_ref)
+                
                 attrs.append(2.5235245)
                 self.features[i].setAttributes(attrs)
             
