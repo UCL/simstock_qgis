@@ -336,6 +336,9 @@ class SimstockQGIS:
             #subprocess.run(r"python -m pip list >> C:\Users\biscu\Documents\phd\Internship\piplistnew.txt", shell=True)
             #subprocess.run(r"python -m pip show pandas >> C:\Users\biscu\Documents\phd\Internship\pandas-upgraded.txt", shell=True)
             
+            
+            
+            ### EXTRACT DATA
             # Get layer, check exists and extract features
             self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
             if self.selectedLayer is None:
@@ -367,6 +370,9 @@ class SimstockQGIS:
             # Save data as csv for Simstock to read
             data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
             
+            
+            
+            ### SIMSTOCK
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
@@ -375,6 +381,9 @@ class SimstockQGIS:
             second.main()
             qgis.utils.iface.messageBar().pushMessage("Simstock finished", "Simstock has completed successfully. [Add more here]", level=Qgis.Success)
             
+            
+            
+            ### SIMULATION
             # Single core
             #for i, idf_file in enumerate(self.idf_files):
             #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
@@ -386,6 +395,8 @@ class SimstockQGIS:
             #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
             #    f.write(str(out) + "\n")
             qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
+            
+            
             
             ### RESULTS HANDLING
             # Change some of the features if necessary (probably not)
