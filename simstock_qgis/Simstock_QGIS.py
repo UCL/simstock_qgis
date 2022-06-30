@@ -319,8 +319,8 @@ class SimstockQGIS:
             print("Button signal sent twice in quick succession - ignoring.")
             
         else:
+            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
             self.simulation_started = time.perf_counter()
-            qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
             
             # Check if initial setup worked
             if self.initial_setup_worked is not None:
@@ -376,14 +376,14 @@ class SimstockQGIS:
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
-            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
             first.main()
             second.main()
-            qgis.utils.iface.messageBar().pushMessage("Simstock finished", "Simstock has completed successfully. [Add more here]", level=Qgis.Success)
             
             
             
             ### SIMULATION
+            qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
+            time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
             # Single core
             #for i, idf_file in enumerate(self.idf_files):
             #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
@@ -440,4 +440,6 @@ class SimstockQGIS:
                 self.selectedLayer.triggerRepaint()
             else:
                 qgis.utils.iface.mapCanvas().refresh()
+            
+            qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
                 
