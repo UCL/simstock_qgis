@@ -34,7 +34,7 @@ from .Simstock_QGIS_dialog import SimstockQGISDialog
 import os.path
 
 #my imports
-import venv
+#import venv
 import subprocess
 import pandas as pd
 import platform
@@ -43,6 +43,7 @@ import multiprocessing as mp
 import qgis.utils
 from qgis.core import Qgis
 import time
+import shutil
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -131,7 +132,7 @@ class SimstockQGIS:
         except ImportError:
             self.initial_tests.append("Shapely failed to load.")
             
-        # Find QGIS Python location to override default Python in path        
+        # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
         
         if self.system == "darwin":
@@ -144,6 +145,8 @@ class SimstockQGIS:
             # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
             shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
             shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
+            if os.path.exists(shoebox_output):
+                shutil.rmtree(shoebox_output)
             run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', self.epw_file, shoebox_idf])
             if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
                 self.initial_tests.append("EnergyPlus could not run.")
@@ -158,7 +161,7 @@ class SimstockQGIS:
             run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
-        
+                        
         if len(self.initial_tests) != 0:
             qgis.utils.iface.messageBar().pushMessage("Initial setup failed", "Some errors have occured - please check the Python console outputs.", level=Qgis.Critical, duration=5)
             self.initial_setup_worked = False
@@ -312,20 +315,20 @@ class SimstockQGIS:
         subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
 
     def run_simulations(self):
+        # Check if initial setup worked
+        if self.initial_setup_worked is not None:
+            if not self.initial_setup_worked:
+                raise RuntimeError("Initial setup failed! Cannot run Simstock.")
+                
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
         time_now = time.perf_counter()
         
-        if self.simulation_started is not None and time_now - self.simulation_started < 5:
+        if self.simulation_started is not None and time_now - self.simulation_started < 60:
             print("Button signal sent twice in quick succession - ignoring.")
             
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
             self.simulation_started = time.perf_counter()
-            
-            # Check if initial setup worked
-            if self.initial_setup_worked is not None:
-                if not self.initial_setup_worked:
-                    raise RuntimeError("Initial setup failed! Cannot run Simstock.")
             
             # Try setting up venv
             #venv.create(os.path.join(self.plugin_dir, "virtenv"))#, system_site_packages=True)#, with_pip=True)
@@ -385,6 +388,7 @@ class SimstockQGIS:
             ### SIMULATION
             qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
             time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
+            
             # Single core
             #for i, idf_file in enumerate(self.idf_files):
             #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
@@ -395,7 +399,7 @@ class SimstockQGIS:
             out = subprocess.run([self.qgis_python_location, multiprocessingscript], capture_output=True, text=True)
             #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
             #    f.write(str(out) + "\n")
-            qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
+            #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
             
             
             
@@ -449,4 +453,14 @@ class SimstockQGIS:
                 qgis.utils.iface.mapCanvas().refresh()
             
             qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
-                
+
+        def retrieve_constructions(self):
+            from eppy import IDF
+
+            # Find the computer's operating system and set path to E+ idd file
+            system = platform.system().lower()
+            if system in ['windows', 'linux', 'darwin']:
+                iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
+            IDF.setiddname(iddfile)
+
+            
