@@ -25,13 +25,13 @@ from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField, QgsFields #to get layers
+from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField, QgsFields, QgsVectorFileWriter, QgsCoordinateTransformContext #to get layers
 
 # Initialize Qt resources from file resources.py
 from .resources import *
 # Import the code for the dialog
 from .Simstock_QGIS_dialog import SimstockQGISDialog
-import os.path
+import os
 
 #my imports
 #import venv
@@ -91,6 +91,7 @@ class SimstockQGIS:
         #initial setup checker
         self.initial_setup_worked = None
         self.simulation_started = None
+        self.load_database_run = None
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
@@ -302,6 +303,9 @@ class SimstockQGIS:
 
         # Check if the run simulation button was clicked and run function if so
         self.dlg.pbRunSim.clicked.connect(self.run_simulations)
+
+        # Check if the run simulation button was clicked and run function if so
+        self.dlg.pbDatabase.clicked.connect(self.retrieve_constructions)
         
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -454,13 +458,46 @@ class SimstockQGIS:
             
             qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
 
-        def retrieve_constructions(self):
-            from eppy import IDF
+    def retrieve_constructions(self):
+        if self.load_database_run is not None:
+            pass
+        else:
+            self.load_database_run = True
+            #from eppy import IDF
 
             # Find the computer's operating system and set path to E+ idd file
-            system = platform.system().lower()
-            if system in ['windows', 'linux', 'darwin']:
-                iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
-            IDF.setiddname(iddfile)
+            #system = platform.system().lower()
+            #if system in ['windows', 'linux', 'darwin']:
+            #    iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
+            #IDF.setiddname(iddfile)
 
-            
+            # Add database layers to project
+            self.database_dir = os.path.join(self.plugin_dir, "Database")
+            self.database_files = os.listdir(self.database_dir)
+
+            database_layers, database_layer_names = self.add_database_layers()
+
+            vlayers_del =[]
+            for i, layer in enumerate(database_layers):
+                uri = "file:///" + layer + "?delimiter={}".format(",")
+                vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
+                vlayers_del.append(vlayer)
+                QgsProject.instance().addMapLayer(vlayer)
+
+            context = QgsCoordinateTransformContext()
+            o_save_options = QgsVectorFileWriter.SaveVectorOptions()
+            o_save_options.layerName="layer1"
+            writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayers_del[0], os.path.join(self.database_dir, "test"), context, o_save_options)
+            o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
+            o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
+            o_save_options.layerName="layer2"
+            writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayers_del[1], os.path.join(self.database_dir, "test"), context, o_save_options)
+
+    def add_database_layers(self):
+        database_layers = []
+        database_layer_names = []
+        for item in self.database_files:
+            database_layers.append(os.path.join(self.database_dir, item))
+            layer_name = item.split("-")[-1][:-4]
+            database_layer_names.append(layer_name)
+        return database_layers, database_layer_names
