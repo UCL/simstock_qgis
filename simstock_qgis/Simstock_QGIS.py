@@ -88,10 +88,11 @@ class SimstockQGIS:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
         
-        #initial setup checker
+        # Various checks
         self.initial_setup_worked = None
         self.simulation_started = None
         self.load_database_run = None
+        self.cwd_set = False
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
@@ -303,6 +304,7 @@ class SimstockQGIS:
         self.dlg.pbRunSim.clicked.connect(self.run_simulations)
         self.dlg.pbDatabase.clicked.connect(self.retrieve_constructions)
         self.dlg.pbOptions.clicked.connect(self.launch_options)
+        self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
         
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -320,11 +322,15 @@ class SimstockQGIS:
         if self.initial_setup_worked is not None:
             if not self.initial_setup_worked:
                 raise RuntimeError("Initial setup failed! Cannot run Simstock.")
+        
+        # Check if user cwd has been set
+        if not self.cwd_set:
+            raise RuntimeError("Please set the working directory first!")
                 
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
         time_now = time.perf_counter()
         
-        if self.simulation_started is not None and time_now - self.simulation_started < 60:
+        if self.simulation_started is not None and time_now - self.simulation_started < 30:
             print("Button signal sent twice in quick succession - ignoring.")
             
         else:
@@ -338,13 +344,13 @@ class SimstockQGIS:
                 raise RuntimeError("Layer does not exist.")
             if not isinstance(self.selectedLayer, QgsVectorLayer):
                 raise TypeError("Simstock expects a Vector Layer as input.")
+            if not self.selectedLayer.isSpatial():
+                raise TypeError("Layer has no geometry.")
+            
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
             
             # Path to qgz file
             path_to_file = QgsProject.instance().absoluteFilePath()
-            
-            # User specified directory for output
-            dirpath = self.dlg.mQgsFileWidget.filePath()
             
             # Extract geometry data from layer as polygons
             polygon = [feature.geometry().asWkt() for feature in self.features]
@@ -497,3 +503,17 @@ class SimstockQGIS:
         from .Simstock_QGIS_dialog import YourDialog
         self.dlg2 = YourDialog()
         self.dlg2.show()
+    
+    def set_cwd(self):
+        """Sets the input path as the cwd. Used for outputting idfs and database files."""
+        # User specified directory for output
+        self.user_cwd = self.dlg.mQgsFileWidget.filePath()
+
+        if self.user_cwd == "":
+            raise FileNotFoundError("Please enter a directory.")
+        if not os.path.exists(self.user_cwd):
+            raise FileNotFoundError("The selected directory does not exist - please create it if necessary.")
+        else:
+            self.user_cwd = os.path.abspath(self.user_cwd)
+            self.cwd_set = True
+            print("Current working directory set to: ", self.user_cwd)
