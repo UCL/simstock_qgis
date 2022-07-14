@@ -96,7 +96,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>150</y>
+     <y>230</y>
      <width>341</width>
      <height>42</height>
     </rect>
@@ -117,7 +117,7 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>200</y>
+     <y>280</y>
      <width>351</width>
      <height>27</height>
     </rect>
@@ -126,9 +126,9 @@
   <widget class="QgsFileWidget" name="mQgsFileWidget">
    <property name="geometry">
     <rect>
-     <x>150</x>
-     <y>270</y>
-     <width>221</width>
+     <x>20</x>
+     <y>200</y>
+     <width>301</width>
      <height>27</height>
     </rect>
    </property>
@@ -140,18 +140,18 @@
    <property name="geometry">
     <rect>
      <x>20</x>
-     <y>250</y>
-     <width>121</width>
+     <y>140</y>
+     <width>341</width>
      <height>61</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
+     <pointsize>11</pointsize>
     </font>
    </property>
    <property name="text">
-    <string>Output folder: (not currently in use)</string>
+    <string>First, choose the working directory and then select the tick button.</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>
@@ -225,8 +225,8 @@
   <widget class="QPushButton" name="pbDatabase">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>390</y>
+     <x>20</x>
+     <y>400</y>
      <width>101</width>
      <height>31</height>
     </rect>
@@ -238,14 +238,31 @@
   <widget class="QPushButton" name="pbOptions">
    <property name="geometry">
     <rect>
-     <x>150</x>
-     <y>390</y>
+     <x>140</x>
+     <y>400</y>
      <width>75</width>
      <height>23</height>
     </rect>
    </property>
    <property name="text">
     <string>Options</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="pbSetcwd">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>200</y>
+     <width>31</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>tick_small.png</normaloff>tick_small.png</iconset>
    </property>
   </widget>
  </widget>
