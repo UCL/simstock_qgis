@@ -333,18 +333,7 @@ class SimstockQGIS:
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
             self.simulation_started = time.perf_counter()
-            
-            # Try setting up venv
-            #venv.create(os.path.join(self.plugin_dir, "virtenv"))#, system_site_packages=True)#, with_pip=True)
-            #subprocess.run("python -m venv --copies %s" % venvdir, capture_output=True)
-            
-            # Check packages
-            #subprocess.run(r"python -m pip uninstall eppy > C:\Users\biscu\Documents\phd\Internship\qgisloggy.txt", capture_output=True, shell=True, check=True)
-            #subprocess.run(r"python -m pip list >> C:\Users\biscu\Documents\phd\Internship\piplistnew.txt", shell=True)
-            #subprocess.run(r"python -m pip show pandas >> C:\Users\biscu\Documents\phd\Internship\pandas-upgraded.txt", shell=True)
-            
-            
-            
+
             ### EXTRACT DATA
             # Get layer, check exists and extract features
             self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
@@ -460,7 +449,8 @@ class SimstockQGIS:
 
     def retrieve_constructions(self):
         if self.load_database_run is not None:
-            pass
+            pass #prevents double press bug
+
         else:
             self.load_database_run = True
             #from eppy import IDF
@@ -473,31 +463,35 @@ class SimstockQGIS:
 
             # Add database layers to project
             self.database_dir = os.path.join(self.plugin_dir, "Database")
-            self.database_files = os.listdir(self.database_dir)
+            database_csvs = [file.path for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv"]
+            database_layer_names = [name.split("-")[-1][:-4] for name in database_csvs]
 
-            database_layers, database_layer_names = self.add_database_layers()
+            def csv_to_gpkg(database_csvs, database_layer_names):
+                """
+                Converts csvs to a single geopackage file that can be loaded and edited.
+                May be better to remove this from the plugin and start from the gpkg point.
+                """
+                context = QgsCoordinateTransformContext()
+                o_save_options = QgsVectorFileWriter.SaveVectorOptions()
 
-            vlayers_del =[]
-            for i, layer in enumerate(database_layers):
-                uri = "file:///" + layer + "?delimiter={}".format(",")
-                vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
-                vlayers_del.append(vlayer)
-                QgsProject.instance().addMapLayer(vlayer)
+                gpkg_name = "Simstock-Database"
+                gpkg_path = os.path.join(self.database_dir, gpkg_name + ".gpkg")
+                for i, layer in enumerate(database_csvs):
+                    uri = "file:///" + layer + "?delimiter={}".format(",")
+                    vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
+                    if i == 0:
+                        o_save_options.layerName = database_layer_names[i]
+                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, gpkg_path[:-5], context, o_save_options)
+                    else:
+                        o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
+                        o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
+                        o_save_options.layerName = database_layer_names[i]
+                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, gpkg_path[:-5], context, o_save_options)
+                return gpkg_path
 
-            context = QgsCoordinateTransformContext()
-            o_save_options = QgsVectorFileWriter.SaveVectorOptions()
-            o_save_options.layerName="layer1"
-            writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayers_del[0], os.path.join(self.database_dir, "test"), context, o_save_options)
-            o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
-            o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
-            o_save_options.layerName="layer2"
-            writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayers_del[1], os.path.join(self.database_dir, "test"), context, o_save_options)
+            def load_all_layers_from_gpkg(gpkg, layer_names):
+                for layer in layer_names:
+                    qgis.utils.iface.addVectorLayer(gpkg + "|layername=" + layer, layer, 'ogr')
 
-    def add_database_layers(self):
-        database_layers = []
-        database_layer_names = []
-        for item in self.database_files:
-            database_layers.append(os.path.join(self.database_dir, item))
-            layer_name = item.split("-")[-1][:-4]
-            database_layer_names.append(layer_name)
-        return database_layers, database_layer_names
+            gpkg_path = csv_to_gpkg(database_csvs, database_layer_names)
+            load_all_layers_from_gpkg(gpkg_path, database_layer_names)
