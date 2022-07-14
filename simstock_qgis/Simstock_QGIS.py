@@ -298,14 +298,11 @@ class SimstockQGIS:
         # show the dialog
         self.dlg.show()
         
-        # Check if the initial setup button was clicked and run function if so
+        # Check if the buttons were clicked and run function if so
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
-
-        # Check if the run simulation button was clicked and run function if so
         self.dlg.pbRunSim.clicked.connect(self.run_simulations)
-
-        # Check if the run simulation button was clicked and run function if so
         self.dlg.pbDatabase.clicked.connect(self.retrieve_constructions)
+        self.dlg.pbOptions.clicked.connect(self.launch_options)
         
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -495,3 +492,8 @@ class SimstockQGIS:
 
             gpkg_path = csv_to_gpkg(database_csvs, database_layer_names)
             load_all_layers_from_gpkg(gpkg_path, database_layer_names)
+
+    def launch_options(self):
+        from .Simstock_QGIS_dialog import YourDialog
+        self.dlg2 = YourDialog()
+        self.dlg2.show()
