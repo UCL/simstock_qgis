@@ -325,8 +325,9 @@ class SimstockQGIS:
         
         # Check if user cwd has been set
         if not self.cwd_set:
-            raise RuntimeError("Please set the working directory first!")
-                
+            #raise RuntimeError("Please set the working directory first!")
+            print("Removed raise error for testing purposes")
+
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
         time_now = time.perf_counter()
         
@@ -450,7 +451,7 @@ class SimstockQGIS:
             
             qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
 
-    def retrieve_constructions(self):
+    def retrieve_constructions(self, file_exists):
         if self.load_database_run is not None:
             pass #prevents double press bug
 
@@ -477,27 +478,27 @@ class SimstockQGIS:
                 context = QgsCoordinateTransformContext()
                 o_save_options = QgsVectorFileWriter.SaveVectorOptions()
 
-                gpkg_name = "Simstock-Database"
-                gpkg_path = os.path.join(self.database_dir, gpkg_name + ".gpkg")
+                #gpkg_path = os.path.join(self.database_dir, self.gpkg_name)
+                #gpkg_path = os.path.join(self.user_cwd, self.gpkg_name)
                 for i, layer in enumerate(database_csvs):
                     uri = "file:///" + layer + "?delimiter={}".format(",")
                     vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
                     if i == 0:
                         o_save_options.layerName = database_layer_names[i]
-                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, gpkg_path[:-5], context, o_save_options)
+                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
                     else:
                         o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
                         o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
                         o_save_options.layerName = database_layer_names[i]
-                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, gpkg_path[:-5], context, o_save_options)
-                return gpkg_path
+                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
 
             def load_all_layers_from_gpkg(gpkg, layer_names):
                 for layer in layer_names:
                     qgis.utils.iface.addVectorLayer(gpkg + "|layername=" + layer, layer, 'ogr')
 
-            gpkg_path = csv_to_gpkg(database_csvs, database_layer_names)
-            load_all_layers_from_gpkg(gpkg_path, database_layer_names)
+            if not file_exists:
+                csv_to_gpkg(database_csvs, database_layer_names)
+            load_all_layers_from_gpkg(self.gpkg_path, database_layer_names)
 
     def launch_options(self):
         from .Simstock_QGIS_dialog import YourDialog
@@ -517,3 +518,13 @@ class SimstockQGIS:
             self.user_cwd = os.path.abspath(self.user_cwd)
             self.cwd_set = True
             print("Current working directory set to: ", self.user_cwd)
+        
+        print("Loading database...")
+        self.gpkg_name = "Simstock-Database.gpkg"
+        self.gpkg_path = os.path.join(self.user_cwd, self.gpkg_name)
+        if os.path.exists(self.gpkg_path):
+            print("Found existing database file. Loading into workspace...")
+            self.retrieve_constructions(file_exists=True)
+        else:
+            print("Database file not found. Creating from defaults...")
+            self.retrieve_constructions(file_exists=False)
