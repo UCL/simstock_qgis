@@ -1,0 +1,413 @@
+!-Generator IDFEditor 1.50
+!-Option SortedOrder UseSpecialFormat
+
+!-NOTE: All comments with '!-' are ignored by the IDFEditor and are generated automatically.
+!-      Use '!' comments if they need to be retained when using the IDFEditor.
+
+
+!-   ===========  ALL OBJECTS IN CLASS: VERSION ===========
+
+Version,8.9;
+
+!-   ===========  ALL OBJECTS IN CLASS: SIMULATIONCONTROL ===========
+
+
+SimulationControl,
+    No,                      !- Do Zone Sizing Calculation
+    No,                      !- Do System Sizing Calculation
+    No,                      !- Do Plant Sizing Calculation
+    No,                      !- Run Simulation for Sizing Periods
+    Yes;                     !- Run Simulation for Weather File Run Periods
+
+
+!-   ===========  ALL OBJECTS IN CLASS: BUILDING ===========
+
+Building,
+    building,                !- Name
+    0.0,                     !- North Axis {deg}
+    City,                    !- Terrain
+    0.04,                    !- Loads Convergence Tolerance Value
+    0.4,                     !- Temperature Convergence Tolerance Value {deltaC}
+    FullExterior,            !- Solar Distribution
+    25,                      !- Maximum Number of Warmup Days
+    6;                       !- Minimum Number of Warmup Days
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SHADOWCALCULATION ===========
+
+ShadowCalculation,
+    AverageOverDaysInFrequency,  !- Calculation Method
+    20,                      !- Calculation Frequency
+    15000,                   !- Maximum Figures in Shadow Overlap Calculations
+    SutherlandHodgman,       !- Polygon Clipping Algorithm
+    SimpleSkyDiffuseModeling;!- Sky Diffuse Modeling Algorithm
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SURFACECONVECTIONALGORITHM:INSIDE ===========
+
+SurfaceConvectionAlgorithm:Inside,TARP;
+
+!-   ===========  ALL OBJECTS IN CLASS: SURFACECONVECTIONALGORITHM:OUTSIDE ===========
+
+SurfaceConvectionAlgorithm:Outside,TARP;
+
+!-   ===========  ALL OBJECTS IN CLASS: HEATBALANCEALGORITHM ===========
+
+HeatBalanceAlgorithm,ConductionTransferFunction,200;
+
+!-   ===========  ALL OBJECTS IN CLASS: TIMESTEP ===========
+
+Timestep,6;
+
+!-   ===========  ALL OBJECTS IN CLASS: RUNPERIOD ===========
+
+
+RunPeriod,
+    ,                        !- Name
+    1,                       !- Begin Month
+    1,                       !- Begin Day of Month
+    12,                      !- End Month
+    31,                      !- End Day of Month
+    Monday,                  !- Day of Week for Start Day
+    Yes,                     !- Use Weather File Holidays and Special Days
+    Yes,                     !- Use Weather File Daylight Saving Period
+    No,                      !- Apply Weekend Holiday Rule
+    Yes,                     !- Use Weather File Rain Indicators
+    Yes,                     !- Use Weather File Snow Indicators
+    1;                       !- Number of Times Runperiod to be Repeated
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULETYPELIMITS ===========
+
+ScheduleTypeLimits,
+    Any Number,              !- Name
+    ,                        !- Lower Limit Value
+    ,                        !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Fraction,                !- Name
+    0,                       !- Lower Limit Value
+    1,                       !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Temperature,             !- Name
+    ,                        !- Lower Limit Value
+    ,                        !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Control Type,            !- Name
+    0,                       !- Lower Limit Value
+    4,                       !- Upper Limit Value
+    Discrete;                !- Numeric Type
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:COMPACT ===========
+
+Schedule:Compact,
+    Activity Schedule 98779, !- Name
+    Any Number,              !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 108;       !- Field 4
+
+Schedule:Compact,
+    Clothing Schedule 98779, !- Name
+    Any Number,              !- Schedule Type Limits Name
+    Through: 4/1,            !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 1,         !- Field 4
+    Through: 9/30,           !- Field 5
+    For: AllDays,            !- Field 6
+    Until: 24:00, .5,        !- Field 8
+    Through: 12/31,          !- Field 9
+    For: AllDays,            !- Field 10
+    Until: 24:00, 1;         !- Field 12
+
+Schedule:Compact,
+    Dwell_Occ,               !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 07:00, 1,         !- Field 4
+    Until: 09:00, 0.5,       !- Field 6
+    Until: 17:00, 0,         !- Field 8
+    Until: 19:00, 0.5,       !- Field 10
+    Until: 24:00, 1,         !- Field 12
+    For: Weekends,           !- Field 13
+    Until: 07:00, 1,         !- Field 15
+    Until: 19:00, 0.5,       !- Field 17
+    Until: 24:00, 1,         !- Field 19
+    For: Holidays,           !- Field 20
+    Until: 07:00, 1,         !- Field 22
+    Until: 19:00, 0.5,       !- Field 24
+    Until: 24:00, 1;         !- Field 26
+
+Schedule:Compact,
+    Dwell_Heat,              !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 15:00, 12,        !- Field 4
+    Until: 23:00, 21,        !- Field 6
+    Until: 24:00, 12,        !- Field 8
+    For: Weekends,           !- Field 9
+    Until: 15:00, 12,        !- Field 11
+    Until: 23:00, 21,        !- Field 13
+    Until: 24:00, 12,        !- Field 15
+    For: Holidays,           !- Field 16
+    Until: 15:00, 12,        !- Field 18
+    Until: 23:00, 21,        !- Field 20
+    Until: 24:00, 12;        !- Field 22
+
+Schedule:Compact,
+    Dwell_Cool,              !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 15:00, 50,        !- Field 4
+    Until: 23:00, 25,        !- Field 6
+    Until: 24:00, 50,        !- Field 8
+    For: Weekends,           !- Field 9
+    Until: 15:00, 50,        !- Field 11
+    Until: 23:00, 25,        !- Field 13
+    Until: 24:00, 50,        !- Field 15
+    For: Holidays,           !- Field 16
+    Until: 15:00, 50,        !- Field 18
+    Until: 23:00, 25,        !- Field 20
+    Until: 24:00, 50;        !- Field 22
+
+Schedule:Compact,
+    Dwell_Equip,             !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 17:00, 0.05,      !- Field 4
+    Until: 18:00, 0.5,       !- Field 6
+    Until: 22:00, 1,         !- Field 8
+    Until: 23:00, 0.75,      !- Field 10
+    Until: 24:00, 0.05,      !- Field 12
+    For: Weekends,           !- Field 13
+    Until: 08:00, 0.05,      !- Field 15
+    Until: 22:00, 1,         !- Field 17
+    Until: 24:00, 0.35,      !- Field 19
+    For: Holidays,           !- Field 20
+    Until: 08:00, 0.05,      !- Field 22
+    Until: 22:00, 1,         !- Field 24
+    Until: 24:00, 0.35;      !- Field 26
+
+Schedule:Compact,
+    Dwell_Light,             !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: Weekdays,           !- Field 2
+    Until: 17:00, 0,         !- Field 4
+    Until: 23:00, 1,         !- Field 6
+    Until: 24:00, 0,         !- Field 8
+    For: Weekends,           !- Field 9
+    Until: 17:00, 0,         !- Field 11
+    Until: 23:00, 1,         !- Field 13
+    Until: 24:00, 0,         !- Field 15
+    For: Holidays,           !- Field 16
+    Until: 17:00, 0,         !- Field 18
+    Until: 23:00, 1,         !- Field 20
+    Until: 24:00, 0;         !- Field 22
+
+Schedule:Compact,
+    Work Efficiency,         !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 0;         !- Field 4
+
+Schedule:Compact,
+    AirVelocitySchedule,     !- Name
+    Any Number,              !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 0.137;     !- Field 4
+
+Schedule:Compact,
+    On 24/7,                 !- Name
+    Fraction,                !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until: 24:00, 1;         !- Field 4
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:CONSTANT ===========
+
+Schedule:Constant,Always 4,Control Type,4;
+
+
+!-   ===========  ALL OBJECTS IN CLASS: GLOBALGEOMETRYRULES ===========
+
+GlobalGeometryRules,
+    UpperLeftCorner,         !- Starting Vertex Position
+    Counterclockwise,        !- Vertex Entry Direction
+    Relative;                !- Coordinate System
+
+
+!-   ===========  ALL OBJECTS IN CLASS: PEOPLE ===========
+
+People,
+    People Dwell,            !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Occ,               !- Number of People Schedule Name
+    Area/Person,             !- Number of People Calculation Method
+    ,                        !- Number of People
+    ,                        !- People per Zone Floor Area {person/m2}
+    4,                       !- Zone Floor Area per Person {m2/person}
+    0.3,                     !- Fraction Radiant
+    AutoCalculate,           !- Sensible Heat Fraction
+    Activity Schedule 98779, !- Activity Level Schedule Name
+    0.0000000382,            !- Carbon Dioxide Generation Rate {m3/s-W}
+    No,                      !- Enable ASHRAE 55 Comfort Warnings
+    ZoneAveraged,            !- Mean Radiant Temperature Calculation Type
+    ,                        !- Surface Name/Angle Factor List Name
+    Work efficiency,         !- Work Efficiency Schedule Name
+    ClothingInsulationSchedule,  !- Clothing Insulation Calculation Method
+    ,                        !- Clothing Insulation Calculation Method Schedule Name
+    Clothing Schedule 98779, !- Clothing Insulation Schedule Name
+    AirVelocitySchedule,     !- Air Velocity Schedule Name
+    Fanger;                  !- Thermal Comfort Model 1 Type
+
+
+!-   ===========  ALL OBJECTS IN CLASS: LIGHTS ===========
+
+Lights,
+    Dwell ,                  !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Light,             !- Schedule Name
+    Watts/Area,              !- Design Level Calculation Method
+    ,                        !- Lighting Level {W}
+    12,                      !- Watts per Zone Floor Area {W/m2}
+    ,                        !- Watts per Person {W/person}
+    0,                       !- Return Air Fraction
+    0.42,                    !- Fraction Radiant
+    0.18,                    !- Fraction Visible
+    1;                       !- Fraction Replaceable
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ELECTRICEQUIPMENT ===========
+
+ElectricEquipment,
+    Dwell,                   !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Equip,             !- Schedule Name
+    Watts/Area,              !- Design Level Calculation Method
+    ,                        !- Design Level {W}
+    25,                      !- Watts per Zone Floor Area {W/m2}
+    ,                        !- Watts per Person {W/person}
+    0,                       !- Fraction Latent
+    0.2,                     !- Fraction Radiant
+    0,                       !- Fraction Lost
+    ELECTRIC EQUIPMENT#Dwell;!- End-Use Subcategory
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONEINFILTRATION:DESIGNFLOWRATE ===========
+
+ZoneInfiltration:DesignFlowRate,
+    Dwell Infiltration,      !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    On 24/7,                 !- Schedule Name
+    AirChanges/Hour,         !- Design Flow Rate Calculation Method
+    ,                        !- Design Flow Rate {m3/s}
+    ,                        !- Flow per Zone Floor Area {m3/s-m2}
+    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
+    0.63554,                 !- Air Changes per Hour {1/hr}
+    1,                       !- Constant Term Coefficient
+    0,                       !- Temperature Term Coefficient
+    0,                       !- Velocity Term Coefficient
+    0;                       !- Velocity Squared Term Coefficient
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONEVENTILATION:DESIGNFLOWRATE ===========
+
+ZoneVentilation:DesignFlowRate,
+    Dwell Nat Vent,          !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Dwell_Occ,               !- Schedule Name
+    Flow/Person,             !- Design Flow Rate Calculation Method
+    ,                        !- Design Flow Rate {m3/s}
+    ,                        !- Flow Rate per Zone Floor Area {m3/s-m2}
+    0.008,                   !- Flow Rate per Person {m3/s-person}
+    ,                        !- Air Changes per Hour {1/hr}
+    NATURAL,                 !- Ventilation Type
+    0,                       !- Fan Pressure Rise {Pa}
+    1,                       !- Fan Total Efficiency
+    1,                       !- Constant Term Coefficient
+    0,                       !- Temperature Term Coefficient
+    0,                       !- Velocity Term Coefficient
+    0,                       !- Velocity Squared Term Coefficient
+    40,                      !- Minimum Indoor Temperature {C}
+    ,                        !- Minimum Indoor Temperature Schedule Name
+    100,                     !- Maximum Indoor Temperature {C}
+    ,                        !- Maximum Indoor Temperature Schedule Name
+    0,                       !- Delta Temperature {deltaC}
+    ,                        !- Delta Temperature Schedule Name
+    -100,                    !- Minimum Outdoor Temperature {C}
+    ,                        !- Minimum Outdoor Temperature Schedule Name
+    100,                     !- Maximum Outdoor Temperature {C}
+    ,                        !- Maximum Outdoor Temperature Schedule Name
+    40;                      !- Maximum Wind Speed {m/s}
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONECONTROL:THERMOSTAT ===========
+
+! - Zone name
+! - Control type schedule name
+! - Dual SP control object type
+! - Dual SP control object name
+ZoneControl:Thermostat,
+    Dwell Thermostat,        !- Name
+    Dwell,                   !- Zone or ZoneList Name
+    Always 4,                !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
+    Dwell Dual SP;           !- Control 1 Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: THERMOSTATSETPOINT:DUALSETPOINT ===========
+
+! - Name
+! - Heating setpoint temperature schedule name
+ThermostatSetpoint:DualSetpoint,
+    Dwell Dual SP,           !- Name
+    Dwell_Heat,              !- Heating Setpoint Temperature Schedule Name
+    Dwell_Cool;              !- Cooling Setpoint Temperature Schedule Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLEDICTIONARY ===========
+
+Output:VariableDictionary,IDF;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:TABLE:SUMMARYREPORTS ===========
+
+
+Output:Table:SummaryReports,
+    AllSummary;              !- Report 1 Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUTCONTROL:TABLE:STYLE ===========
+
+OutputControl:Table:Style,
+    CommaAndHTML,            !- Column Separator
+    JtoKWH;                  !- Unit Conversion
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLE ===========
+
+Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Annual;
+Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Annual;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
+
+
+Output:Diagnostics,
+    DoNotMirrorDetachedShading;  !- Key 1
+
