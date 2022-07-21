@@ -18,6 +18,7 @@ args = parser.parse_args()
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
 IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
+os.makedirs(IDF_DIR, exist_ok=True)
 ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
 datafile = args.datafile
 datafilename = datafile[:-17]
