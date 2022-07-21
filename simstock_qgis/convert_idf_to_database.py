@@ -72,3 +72,6 @@ def dict_to_csv(object_dict):
             if os.path.exists(filename):
                 print("File: '%s' found. Appending to csv..." % filename)
             df.to_csv(filename, mode='a', header=not os.path.exists(filename), index=False)
+
+if __name__ == "__main__":
+    main()
