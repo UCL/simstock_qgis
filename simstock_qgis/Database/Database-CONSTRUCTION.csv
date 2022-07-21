@@ -1,5 +1,5 @@
 Name,Outside_Layer,Layer_2,Layer_3,Layer_4,Layer_5,Layer_6,Layer_7,Layer_8,Layer_9,Layer_10,Notes
-External Wall,Wood_siding_0.009,Fibreglass_quilt_0.066 ,Plasterboard_0.012,,,,,,,,example construction
-Roof,Roof_Deck_0.019,Fibreglass_quilt_0.1118,Plasterboard_0.01,,,,,,,,example construction
-Floor,Floor_insulation_00,Timber_Flooring_0.25,,,,,,,,,example construction
-Double Pane Window,Glass_type_1_0.003175,Air_Space_Resistance_0.013,Glass_type_1_0.003175,,,,,,,,example construction
+External Wall,WoodSiding,FibreglassQuilt,Plasterboard,,,,,,,,example construction
+Roof,RoofDeck,FibreglassQuilt,Plasterboard,,,,,,,,example construction
+Floor,FloorInsulation,TimberFlooring,,,,,,,,,example construction (inlcudes thickness of zero to avoid error on processing
+Double Pane Window,GlassType1,AirSpaceResistance,GlassType1,,,,,,,,example construction

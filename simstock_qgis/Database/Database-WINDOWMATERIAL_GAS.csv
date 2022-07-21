@@ -1,2 +1,2 @@
-Name,Gas_Type,Notes
-Air_Space_Resistance,Air,example material
+MatName,Gas_Type,Notes
+AirSpaceResistance,Air,example material
