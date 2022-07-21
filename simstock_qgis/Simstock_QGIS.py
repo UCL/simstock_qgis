@@ -97,10 +97,8 @@ class SimstockQGIS:
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-        idf_dir = os.path.join(self.plugin_dir, "idf_files")
+        self.idf_dir = os.path.join(self.plugin_dir, "idf_files")
         self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
-        files = os.scandir(os.path.abspath(idf_dir))
-        self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
 
         # Find the computer's operating system and find energyplus version
         self.system = platform.system().lower()
@@ -302,7 +300,7 @@ class SimstockQGIS:
         
         # Check if the buttons were clicked and run function if so
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
-        self.dlg.pbRunSim.clicked.connect(self.run_simulations)
+        self.dlg.pbRunSim.clicked.connect(self.run_plugin)
         #self.dlg.pbOptions.clicked.connect(self.launch_options)
         self.dlg.pbOptions.clicked.connect(self.setup_basic_settings)
         self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
@@ -318,7 +316,7 @@ class SimstockQGIS:
         output_dir = idf_file[:-4]
         subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
 
-    def run_simulations(self):
+    def run_plugin(self):
         # Check if initial setup worked
         if self.initial_setup_worked is not None:
             if not self.initial_setup_worked:
@@ -336,7 +334,7 @@ class SimstockQGIS:
             print("Button signal sent twice in quick succession - ignoring.")
             
         else:
-            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info)
+            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
             self.simulation_started = time.perf_counter()
 
             ### EXTRACT DATA
@@ -381,25 +379,29 @@ class SimstockQGIS:
             preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
             second.main()
             
-            
+
             
             ### SIMULATION
-            qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
-            time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
+            def run_simulation(multiprocessing = True):
+                #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
+                time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
+                
+                if not multiprocessing: # Single core
+                    for i, idf_file in enumerate(self.idf_files):
+                        print(f"Starting simulation {i+1} of {len(self.idf_files)}")
+                        self.run_ep(idf_file)
+                
+                else: # Parallel processing
+                    multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
+                    out = subprocess.run([self.qgis_python_location, multiprocessingscript], capture_output=True, text=True)
+                    #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
+                    #    f.write(str(out) + "\n")
+                #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
+
+            self.idf_files = [file.path for file in os.scandir(self.idf_dir) if file.name[-4:] == ".idf"]
+            run_simulation(multiprocessing=True) #TODO: add selector
             
-            # Single core
-            #for i, idf_file in enumerate(self.idf_files):
-            #    print(f"Starting simulation {i+1} of {len(self.idf_files)}")
-            #    self.run_ep(idf_file)
-            
-            # Parallel processing
-            multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
-            out = subprocess.run([self.qgis_python_location, multiprocessingscript], capture_output=True, text=True)
-            #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-            #    f.write(str(out) + "\n")
-            #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
-            
-            
+
             
             ### RESULTS HANDLING
             # Change some of the existing attributes if necessary (probably not)
@@ -453,47 +455,42 @@ class SimstockQGIS:
             qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
 
     def load_database(self, file_exists):
-        if self.load_database_run is not None:
-            pass #prevents double press bug
+        def csv_to_gpkg(database_csvs, database_layer_names):
+            """
+            Converts csvs to a single geopackage file that can be loaded and edited.
+            May be better to remove this from the plugin and start from the gpkg point.
+            """
+            context = QgsCoordinateTransformContext()
+            o_save_options = QgsVectorFileWriter.SaveVectorOptions()
 
-        else:
-            self.load_database_run = True
+            for i, file in enumerate(database_csvs):
+                uri = "file:///" + file.path + "?delimiter={}".format(",")
+                vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
+                if i == 0:
+                    o_save_options.layerName = database_layer_names[i]
+                    writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
+                else: 
+                    # Subsequent layers must be added differently to the first
+                    o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
+                    o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
+                    o_save_options.layerName = database_layer_names[i]
+                    writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
 
-            # Add database layers to project
-            self.database_dir = os.path.join(self.plugin_dir, "Database")
-            database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv"]
-            #database_layer_names = [name.split("-")[-1][:-4] for name in database_csvs]
-            database_layer_names = [file.name[:-4] for file in database_csvs]
+        def load_all_layers_from_gpkg(gpkg, layer_names):
+            for layer in layer_names:
+                qgis.utils.iface.addVectorLayer(gpkg + "|layername=" + layer, layer, 'ogr')
 
-            def csv_to_gpkg(database_csvs, database_layer_names):
-                """
-                Converts csvs to a single geopackage file that can be loaded and edited.
-                May be better to remove this from the plugin and start from the gpkg point.
-                """
-                context = QgsCoordinateTransformContext()
-                o_save_options = QgsVectorFileWriter.SaveVectorOptions()
+        # Find database csvs which contain the default constructions/materials
+        self.database_dir = os.path.join(self.plugin_dir, "Database")
+        database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv"]
+        database_layer_names = [file.name[:-4] for file in database_csvs]
 
-                #gpkg_path = os.path.join(self.database_dir, self.gpkg_name)
-                #gpkg_path = os.path.join(self.user_cwd, self.gpkg_name)
-                for i, file in enumerate(database_csvs):
-                    uri = "file:///" + file.path + "?delimiter={}".format(",")
-                    vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
-                    if i == 0:
-                        o_save_options.layerName = database_layer_names[i]
-                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
-                    else:
-                        o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
-                        o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
-                        o_save_options.layerName = database_layer_names[i]
-                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
-
-            def load_all_layers_from_gpkg(gpkg, layer_names):
-                for layer in layer_names:
-                    qgis.utils.iface.addVectorLayer(gpkg + "|layername=" + layer, layer, 'ogr')
-
-            if not file_exists:
-                csv_to_gpkg(database_csvs, database_layer_names)
-            load_all_layers_from_gpkg(self.gpkg_path, database_layer_names)
+        # If the database gpkg doesn't exit, create it from the csvs
+        if not file_exists:
+            csv_to_gpkg(database_csvs, database_layer_names)
+        
+        # Add the database layers
+        load_all_layers_from_gpkg(self.gpkg_path, database_layer_names)
 
     def launch_options(self):
         from .Simstock_QGIS_dialog import YourDialog
@@ -513,12 +510,20 @@ class SimstockQGIS:
             raise FileNotFoundError("Please enter a directory.")
         if not os.path.exists(self.user_cwd):
             raise FileNotFoundError("The selected directory does not exist - please create it if necessary.")
-        else:
-            self.user_cwd = os.path.abspath(self.user_cwd)
-            self.cwd_set = True
-            print("Current working directory set to: ", self.user_cwd)
+        
+        # Set abspath after checks
+        self.user_cwd = os.path.abspath(self.user_cwd)
         
         print("Loading database...")
+        # First check for existing database layers and remove them
+        layers = QgsProject.instance().mapLayers()
+        database_layer_ids = []
+        for _, layer in layers.items():
+            if layer.name()[:9] == "Database-": #find database layers
+                database_layer_ids.append(layer.id())
+        QgsProject.instance().removeMapLayers(database_layer_ids)
+
+        # Either load or create the gpkg file
         self.gpkg_name = "Simstock-Database.gpkg"
         self.gpkg_path = os.path.join(self.user_cwd, self.gpkg_name)
         if os.path.exists(self.gpkg_path):
@@ -527,16 +532,13 @@ class SimstockQGIS:
         else:
             print("Database file not found. Creating from defaults...")
             self.load_database(file_exists=False)
+        
+        self.cwd_set = True
+        print("Current working directory set to: ", self.user_cwd)
 
     def setup_basic_settings(self):
         """Adds materials and constructions to the basic settings idf based on 
         what is in the database files."""
-
-        # Set up Eppy
-        from eppy.modeleditor import IDF
-        if self.system in ['windows', 'linux', 'darwin']:
-            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
-        IDF.setiddname(iddfile)
 
         def create_mat_dicts(df):
             """Converts database dataframe to a list of dictionaries, ignoring 
@@ -546,14 +548,15 @@ class SimstockQGIS:
                 dictionary = {}
                 for i, content in enumerate(row):
                     label = row.index[i]
-                    if not content == qgis_null and not label == 'Notes': #use qgis nulltype instead of pd here
+                    if not content == qgis_null and not label == 'Notes': #using qgis nulltype instead of pd here
                         dictionary[label] = content
                 dict_list.append(dictionary)
             return dict_list
 
         def get_required_materials(const):
             """Looks in constructions and extracts the names of all required 
-            materials"""
+            materials (i.e. the materials which are used in any of the 
+            constructions)."""
             materials_list = []
             for item in const:
                 materials = list(item.values())[1:] #ignore construction names
@@ -567,10 +570,13 @@ class SimstockQGIS:
             return dict_list
 
         def add_constructions(construction_dict):
+            """Adds construction objects to the idf."""
             for const in construction_dict:
                 idf.newidfobject("CONSTRUCTION",**const)
 
         def add_materials(key, material_df, used_materials):
+            """Checks against required materials list, and adds those required 
+            to the idf."""
             materials = create_mat_dicts(material_df)
             material_type = key[9:].replace("_", ":") #change names to match energyplus fields
             
@@ -578,9 +584,9 @@ class SimstockQGIS:
             new_list=[]    
             for mat in materials:
                 for item in used_materials:
-                    if item['Name']==mat['MatName']:
+                    if item['Name']==mat['MatName']: #check if required
                         new_item=dict(item,**mat)
-                        new_list.append(new_item)
+                        new_list.append(new_item) #add if so
                         
             for el in new_list:
                 del(el['MatName'])#remove the temporary matname field
@@ -598,23 +604,39 @@ class SimstockQGIS:
                 dict[layer.name()] = df
             return dict
 
+        # Set up Eppy
+        from eppy.modeleditor import IDF, IDDAlreadySetError
+        if self.system in ['windows', 'linux', 'darwin']:
+            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+        try:
+            IDF.setiddname(iddfile)
+        except IDDAlreadySetError:
+            pass
+
         idf = IDF(os.path.join(self.plugin_dir, 'base.idf'))
         
+        # Find database layers in current project
         layers = QgsProject.instance().mapLayers()
         database_layers = []
         for _, layer in layers.items():
-            if layer.name()[:9] == "Database-": #find database layers
+            if layer.name()[:9] == "Database-": 
                 database_layers.append(layer)
-        
-        dfs = attributes_to_dfs(database_layers)
-        construction_df = dfs["Database-CONSTRUCTION"]
 
+        # Convert database attribute tables to dataframes
+        dfs = attributes_to_dfs(database_layers)
+
+        # Add constructions to idf
+        construction_df = dfs["Database-CONSTRUCTION"]
         const = create_mat_dicts(construction_df)
-        add_constructions(const) #add constructions to idf
+        add_constructions(const)
+
+        # Get materials used in constructions
         used_materials = get_required_materials(const)
 
+        # Add materials to idf
         for key, df in dfs.items():
             if "MATERIAL" in key:
-                add_materials(key, df, used_materials) #add materials to idf
+                add_materials(key, df, used_materials)
 
+        # Save idf
         idf.saveas(os.path.join(self.plugin_dir, 'basic_settings.idf'))
