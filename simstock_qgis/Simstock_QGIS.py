@@ -62,13 +62,6 @@ class SimstockQGIS:
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         
-        # Update path to access Simstock scripts
-        sys.path.insert(0, self.plugin_dir)
-        
-        # Update path to packaged eppy
-        eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
-        sys.path.append(eppy_dir)
-        
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
@@ -89,15 +82,25 @@ class SimstockQGIS:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
         
+
+
+        ### CUSTOM ADDITIONS
+        # Update path to access Simstock scripts
+        sys.path.insert(0, self.plugin_dir)
+        
+        # Update path to packaged eppy
+        eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
+        sys.path.append(eppy_dir)
+
         # Various checks
-        self.initial_setup_worked = None
-        self.simulation_started = None
-        self.load_database_run = None
-        self.cwd_set = False
+        self.initial_setup_worked = None #check if initial setup worked
+        self.simulation_started = None #check if the run button was pressed
+        self.cwd_set = False #check if the user set the cwd
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
         self.idf_dir = os.path.join(self.plugin_dir, "idf_files")
+        #TODO: replace default weather file with auto-select script or default file
         self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
 
         # Find the computer's operating system and find energyplus version
@@ -136,6 +139,7 @@ class SimstockQGIS:
         # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
         
+        # Mac OS specific checks
         if self.system == "darwin":
             # Make E+ application executable
             try:
@@ -157,12 +161,14 @@ class SimstockQGIS:
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
             
+        # Windows specific checks
         if self.system == "windows":
             # Test that the QGIS Python works via subprocess
             run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
             if run_python_test.stdout != "success\n":
                 self.initial_tests.append("Python could not be run.")
-                        
+        
+        # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
             qgis.utils.iface.messageBar().pushMessage("Initial setup failed", "Some errors have occured - please check the Python console outputs.", level=Qgis.Critical, duration=5)
             self.initial_setup_worked = False
@@ -170,7 +176,7 @@ class SimstockQGIS:
                 print("\n" + error + "\n")
         else:
             self.initial_setup_worked = True
-            qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success, duration=5)
+            qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
             print("Initial setup completed successfully. Please restart QGIS.")
 
     # noinspection PyMethodMayBeStatic
@@ -310,11 +316,11 @@ class SimstockQGIS:
         
         # See if OK was pressed
         if result:
-            pass
+            pass #don't do anything if OK was pressed
             
-    def run_ep(self, idf_file):
-        output_dir = idf_file[:-4]
-        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
+    def run_ep(self, idf_path):
+        output_dir = idf_path[:-4]
+        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_path])
 
     def run_plugin(self):
         # Check if initial setup worked
@@ -325,10 +331,10 @@ class SimstockQGIS:
         # Check if user cwd has been set
         if not self.cwd_set:
             #raise RuntimeError("Please set the working directory first!")
-            print("Removed raise error for testing purposes")
+            print("Removed raise error for testing purposes") #TODO: re-add this before distributing 
 
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
-        time_now = time.perf_counter()
+        time_now = time.perf_counter() #TODO: make this better, maybe with a refresh button
         
         if self.simulation_started is not None and time_now - self.simulation_started < 30:
             print("Button signal sent twice in quick succession - ignoring.")
@@ -375,9 +381,9 @@ class SimstockQGIS:
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
-            first.main()
+            first.main() #TODO: edit BI function with Ivan's shading solution
             preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
-            second.main()
+            second.main() #TODO: output idf files and results in cwd
             
 
             
