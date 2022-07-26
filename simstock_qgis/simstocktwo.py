@@ -4,14 +4,15 @@ import platform
 import pandas as pd
 from ast import literal_eval
 from shapely.wkt import loads
-from eppy.modeleditor import IDF
+from eppy.modeleditor import IDF, IDDAlreadySetError
 from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
-IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
+#IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
+#os.makedirs(IDF_DIR, exist_ok=True)
 ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
 input_data = os.path.join(ROOT_DIR, 'sa_preprocessed.csv')
 
@@ -21,7 +22,11 @@ min_avail_width_for_window = 1
 min_avail_height = 80
 
 
-def main():
+def main(idf_dir):
+    # User set cwd from main script
+    IDF_DIR = idf_dir
+    os.makedirs(IDF_DIR, exist_ok=True)
+
     start = time()
     print('__________________________________________________________________',
           flush=True)
@@ -32,7 +37,10 @@ def main():
     system = platform.system().lower()
     if system in ['windows', 'linux', 'darwin']:
         iddfile = os.path.join(EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
-    IDF.setiddname(iddfile)
+    try:
+        IDF.setiddname(iddfile) #not needed due to prior setup fns setting idd
+    except IDDAlreadySetError:
+        pass
     idf = IDF(ep_basic_settings)
 
     # Load input data (preprocessing outputs)
@@ -112,8 +120,20 @@ def main():
         building_object = idf.idfobjects['BUILDING'][0]
         building_object.Name = bi
         
+        # Get the data for the BI
         bi_df = df[df['bi'] == bi]
-        createidfs(bi_df, "bi")
+
+        # Get the data for other BIs for shading
+        other_shading_df = df[df['bi'] != bi]
+        other_shading_df['shading'] = True
+        bi_df = pd.concat([bi_df, other_shading_df]) #include other BIs as shading
+        shading_vals = bi_df['shading'].to_numpy()
+        
+        # Only create idf if the BI is not entirely composed of shading blocks
+        if not shading_vals.all():
+            createidfs(bi_df, "bi")
+        else:
+            continue
             
     #else:
     #    # Change the name field of the building object
