@@ -94,12 +94,11 @@ class SimstockQGIS:
 
         # Various checks
         self.initial_setup_worked = None #check if initial setup worked
-        self.simulation_started = None #check if the run button was pressed
+        self.simulation_started = False #check if the run button was pressed
         self.cwd_set = False #check if the user set the cwd
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-        self.idf_dir = os.path.join(self.plugin_dir, "idf_files")
         #TODO: replace default weather file with auto-select script or default file
         self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
 
@@ -107,6 +106,7 @@ class SimstockQGIS:
         self.system = platform.system().lower()
         if self.system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
+            self.readvarseso = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(self.system))
         
         # Locate QGIS Python, differs by OS
         qgis_python_dir = sys.exec_prefix
@@ -320,7 +320,8 @@ class SimstockQGIS:
             
     def run_ep(self, idf_path):
         output_dir = idf_path[:-4]
-        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_path])
+        #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_path])
+        subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_path]) #no readvarseso
 
     def run_plugin(self):
         # Check if initial setup worked
@@ -330,18 +331,18 @@ class SimstockQGIS:
         
         # Check if user cwd has been set
         if not self.cwd_set:
-            #raise RuntimeError("Please set the working directory first!")
-            print("Removed raise error for testing purposes") #TODO: re-add this before distributing 
+            raise RuntimeError("Please set the working directory first!")
+            #print("Removed raise error for testing purposes") #TODO: re-add this before distributing 
 
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
-        time_now = time.perf_counter() #TODO: make this better, maybe with a refresh button
+        #time_now = time.perf_counter() #TODO: make this better, maybe with a refresh button
         
-        if self.simulation_started is not None and time_now - self.simulation_started < 30:
-            print("Button signal sent twice in quick succession - ignoring.")
+        if self.simulation_started:
+            print("Please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
             
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
-            self.simulation_started = time.perf_counter()
+            self.simulation_started = True
 
             ### EXTRACT DATA
             # Get layer, check exists and extract features
@@ -383,7 +384,7 @@ class SimstockQGIS:
             import simstocktwo as second
             first.main() #TODO: edit BI function with Ivan's shading solution
             preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
-            second.main() #TODO: output idf files and results in cwd
+            second.main(idf_dir = self.idf_dir)
             
 
             
@@ -393,20 +394,34 @@ class SimstockQGIS:
                 time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
                 
                 if not multiprocessing: # Single core
+                    print("Running EnergyPlus simulation on a single core...")
                     for i, idf_file in enumerate(self.idf_files):
                         print(f"Starting simulation {i+1} of {len(self.idf_files)}")
                         self.run_ep(idf_file)
                 
                 else: # Parallel processing
-                    multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
-                    out = subprocess.run([self.qgis_python_location, multiprocessingscript], capture_output=True, text=True)
+                    print("Running EnergyPlus simulation on multiple cores...")
+                    multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py") #TODO: change epw file in mp script
+                    out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-                    #    f.write(str(out) + "\n")
+                    #    f.write(str(out))# + "\n")
+                
+                idf_result_dirs = []
+                for idf_path in self.idf_files:
+                    idf_result_dirs.append(idf_path[:-4])
+
                 #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
+                return idf_result_dirs
+            
+            def run_readvarseso(idf_result_dirs):
+                for dir in idf_result_dirs:
+                    subprocess.run([self.readvarseso], cwd=dir)
 
             self.idf_files = [file.path for file in os.scandir(self.idf_dir) if file.name[-4:] == ".idf"]
-            run_simulation(multiprocessing=True) #TODO: add selector
-            
+            idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked())
+            #TODO: add rvi generator
+            run_readvarseso(idf_result_dirs)
+
 
             
             ### RESULTS HANDLING
@@ -519,6 +534,9 @@ class SimstockQGIS:
         
         # Set abspath after checks
         self.user_cwd = os.path.abspath(self.user_cwd)
+
+        # Set idf path
+        self.idf_dir = os.path.join(self.user_cwd, "idf_files")
         
         print("Loading database...")
         # First check for existing database layers and remove them
