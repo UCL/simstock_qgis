@@ -413,6 +413,10 @@ Output:Variable,
     *,                       !- Key Value
     Zone Thermal Comfort Operative Temperature,  !- Variable Name
     Hourly;                  !- Reporting Frequency
+	
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:METER ===========
+	
+Output:Meter,Electricity:Zone:*,annual;
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
 
