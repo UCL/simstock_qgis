@@ -308,7 +308,7 @@ class SimstockQGIS:
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
         self.dlg.pbRunSim.clicked.connect(self.run_plugin)
         #self.dlg.pbOptions.clicked.connect(self.launch_options)
-        self.dlg.pbOptions.clicked.connect(self.setup_basic_settings)
+        #self.dlg.pbOptions.clicked.connect(self.setup_basic_settings)
         self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
         
         # Run the dialog event loop
@@ -333,6 +333,9 @@ class SimstockQGIS:
         if not self.cwd_set:
             raise RuntimeError("Please set the working directory first!")
             #print("Removed raise error for testing purposes") #TODO: re-add this before distributing 
+
+        # Setup basic settings idf from database materials/constructions
+        self.setup_basic_settings()
 
         # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
         #time_now = time.perf_counter() #TODO: make this better, maybe with a refresh button
@@ -416,11 +419,17 @@ class SimstockQGIS:
             def run_readvarseso(idf_result_dirs):
                 for dir in idf_result_dirs:
                     subprocess.run([self.readvarseso], cwd=dir)
+            
+            def generate_rvis(idf_result_dirs):
+                for dir in idf_result_dirs:
+                    with open (os.path.join(dir, "results-rvi.rvi"), "w") as f:
+                        f.write("eplusout.eso\neplusout.csv\n0")
 
+            # Run E+ simulation, generate .rvi files and run ReadVarsESO
             self.idf_files = [file.path for file in os.scandir(self.idf_dir) if file.name[-4:] == ".idf"]
-            idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked())
-            #TODO: add rvi generator
-            run_readvarseso(idf_result_dirs)
+            self.idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
+            generate_rvis(self.idf_result_dirs)
+            run_readvarseso(self.idf_result_dirs)
 
 
             
