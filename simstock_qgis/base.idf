@@ -404,6 +404,15 @@ OutputControl:Table:Style,
 
 Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Annual;
 Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Annual;
+Output:Variable,
+    *,                       !- Key Value
+    Zone Operative Temperature,  !- Variable Name
+    Hourly;                  !- Reporting Frequency
+
+Output:Variable,
+    *,                       !- Key Value
+    Zone Thermal Comfort Operative Temperature,  !- Variable Name
+    Hourly;                  !- Reporting Frequency
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
 
