@@ -45,6 +45,8 @@ from qgis.core import Qgis
 from qgis.core import NULL as qgis_null
 import time
 import shutil
+from eppy.modeleditor import IDF, IDDAlreadySetError
+import numpy as np
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -114,6 +116,14 @@ class SimstockQGIS:
             self.qgis_python_location = qgis_python_dir + r"\python"
         if self.system == "darwin":
             self.qgis_python_location = qgis_python_dir + "/bin/python3"
+
+        # Set up Eppy TODO: check if this works all the time
+        if self.system in ['windows', 'linux', 'darwin']:
+            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+        try:
+            IDF.setiddname(iddfile)
+        except IDDAlreadySetError:
+            pass
         
     
     def initial_setup(self):
@@ -386,7 +396,7 @@ class SimstockQGIS:
             import simstockone as first
             import simstocktwo as second
             first.main() #TODO: edit BI function with Ivan's shading solution
-            preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
+            self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
             second.main(idf_dir = self.idf_dir)
             
 
@@ -405,7 +415,7 @@ class SimstockQGIS:
                 else: # Parallel processing
                     print("Running EnergyPlus simulation on multiple cores...")
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py") #TODO: change epw file in mp script
-                    out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
+                    #out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
                     #    f.write(str(out))# + "\n")
                 
@@ -442,28 +452,107 @@ class SimstockQGIS:
             mem_layer_data = mem_layer.dataProvider()
             attr = self.selectedLayer.dataProvider().fields().toList() # QgsField type
             fields = self.selectedLayer.fields() # QgsFields type
+
+            # Extract the results from the csvs by thermal zone
+            def getzones(idf):
+                '''Finds zones in idf and outputs numpy array'''
+                zones = idf.idfobjects['ZONELIST'][0] #get zonenames
+                lst = [""]*len(zones.fieldnames)    #initiate blank list
+                
+                for i, fieldname in enumerate(zones.fieldnames):
+                    lst[i]=zones[fieldname]     #extract zonenames from eppy obj
+                
+                lst = np.array(lst)
+                lst = lst[lst!=""]      #strip blank objects out
+                zonelist = lst[2:]      #remove headers
+                
+                return zonelist
+
+            def make_allresults_dict():
+                """Returns a dict where the key is the name of the thermal
+                zone and the value is a df containing all results."""
+                results = {}
+                for dir in self.idf_result_dirs:
+                    df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
+                    idf = IDF(dir + ".idf")
+                    zonelist = getzones(idf)
+
+                    for zone in zonelist:
+                        zonename = zone.upper() #E+ outputs zone names in caps in results
+                        zonecols = [col for col in df.columns if zonename in col]
+                        results[zone] = df[zonecols]
+                return results
+
+            def extract_results(results):
+                """Extracts the results of interest from the individual dfs."""
+                for zone, df in results.items():
+                    output_name = "Zone Operative Temperature"
+                    threshold_val = 18.0 #threshold to report hours above/below
+                    operative_col = [col for col in df.columns if output_name in col]
+                    operative_series = df[operative_col[0]] #should only be one col
+                    above = operative_series[operative_series > threshold_val].count()
+                    below = operative_series[operative_series <= threshold_val].count()
+
+                    output_name = "Electricity"
+                    elec_col = [col for col in df.columns if output_name in col]
+                    elec_series = df[elec_col[0]] #should only be one col
+                    elec = elec_series.sum()
+                    print(zone,": ", above, below, elec)
             
-            # Add new attributes for the results
-            new_attrs = [QgsField('bi_ref', QVariant.String), QgsField('results', QVariant.Double)]
+            all_results = make_allresults_dict()
+            extract_results(all_results)
+
+            # Add new attribute types for the results
+            max_floors = int(self.preprocessed_df['nofloors'].max())
+            attr_types = ["Hours above operative temperature",
+                          "Hours below operative temperature",
+                          "Electricity consumption"]
+
+            def make_new_attrs(max_floors, attr_types):
+                """Creates a result field for each result type up to the max
+                number of floors."""
+                new_attrs = []
+                new_attrs.append(QgsField('bi_ref', QVariant.String))
+                for attr_name in attr_types:
+                    for i in range(max_floors):
+                        attr_name_floor = attr_name + ": FLOOR_" + str(i)
+                        new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
+                attr_names = [attr.name() for attr in new_attrs]
+                return new_attrs, attr_names
+
+            new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
             for new_attr in new_attrs:
                 fields.append(new_attr)
             attr.extend(new_attrs)
+
+            def add_results_to_features(fields):
+                # Set the attribute values themselves
+                for i in range(len(self.features)):
+                    # Update the feature to gain the new fields object
+                    self.features[i].setFields(fields, initAttributes=False)
+                    
+                    # Grab the attributes from this feature
+                    feature_attrs = self.features[i].attributes()
+                    
+                    # Get the unique id for polygon
+                    osgb = self.features[i].attribute("osgb")
+
+                    # Find the BI ref
+                    bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
+
+                    # TODO: add for loop here to add results from dict
+
+                    # Append the new results
+                    result_vals = [bi_ref, 2.546]
+                    feature_attrs.extend(result_vals)
+                    # TODO: work out how to add a different number of vals for each
+                    # can add fewer vals and gives null for missing fields
+                    # probably unavoidable due to how the attribute tab works
+
+                    # Set the feature's attributes
+                    self.features[i].setAttributes(feature_attrs)
             
-            # Set the attribute values themselves
-            for i in range(len(self.features)):
-                #update the feature to gain the new fields object
-                self.features[i].setFields(fields, initAttributes=False)
-                
-                #grab the attributes from this feature
-                attrs = self.features[i].attributes()
-                
-                #append the new values
-                osgb = self.features[i].attribute("osgb")
-                bi_ref = preprocessed_df.loc[preprocessed_df["osgb"] == osgb, "bi"].values[0]
-                attrs.append(bi_ref)
-                
-                attrs.append(2.5235245)
-                self.features[i].setAttributes(attrs)
+            add_results_to_features(fields)
             
             # Add the attributes into the new layer and push it to QGIS
             mem_layer_data.addAttributes(attr)
@@ -638,13 +727,13 @@ class SimstockQGIS:
             return dict
 
         # Set up Eppy
-        from eppy.modeleditor import IDF, IDDAlreadySetError
-        if self.system in ['windows', 'linux', 'darwin']:
-            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
-        try:
-            IDF.setiddname(iddfile)
-        except IDDAlreadySetError:
-            pass
+#        from eppy.modeleditor import IDF, IDDAlreadySetError
+#        if self.system in ['windows', 'linux', 'darwin']:
+#            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+#        try:
+#            IDF.setiddname(iddfile)
+#        except IDDAlreadySetError:
+#            pass
 
         idf = IDF(os.path.join(self.plugin_dir, 'base.idf'))
         
