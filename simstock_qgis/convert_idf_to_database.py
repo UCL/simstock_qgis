@@ -8,19 +8,22 @@ def main():
     IDF.setiddname(r"EnergyPlus\ep8.9_windows\Energy+.idd")
 
     ### SET THE IDF FILE TO BE CONVERTED:
-    idf = IDF("basic_settings backup.idf")
+    idf = IDF("basic_settings.idf")
 
     ### THE OBJECTS TO BE RETRIEVED FROM THE IDF FILE:
     # More can be added here if required - the dictonary key name needs to
     # match the idf object name exactly, except replacing ":" with "_"
     # and also it is not case-sensitive
-    object_dict = {"material" : idf.idfobjects['MATERIAL'],
+    """object_dict = {"material" : idf.idfobjects['MATERIAL'],
                "material_nomass" : idf.idfobjects['MATERIAL:NOMASS'],
                "material_infraredtransparent" : idf.idfobjects['MATERIAL:INFRAREDTRANSPARENT'],
                "material_airgap" : idf.idfobjects['MATERIAL:AIRGAP'],
                "windowmaterial_glazing" : idf.idfobjects['WINDOWMATERIAL:GLAZING'],
                "windowmaterial_gas" : idf.idfobjects['WINDOWMATERIAL:GAS'],
-               "construction" : idf.idfobjects['CONSTRUCTION']}
+               "construction" : idf.idfobjects['CONSTRUCTION']}"""
+    object_dict = {"people" : idf.idfobjects['PEOPLE'],
+                   "electricequipment" : idf.idfobjects['ELECTRICEQUIPMENT'],
+                   "lights" : idf.idfobjects['LIGHTS']}
     
     ### CONVERT TO CSV FILES:
     # Note that if the csv files already exist, they will be appended to
@@ -37,7 +40,7 @@ def to_dict(objects, is_material):
         no_objls = len(object.objls) #no of fields
         for i in range(no_objls + 1):
             if i < no_objs:
-                if object.objls[i] == "key":
+                if object.objls[i] == "key": #ignore the class name field
                     continue
                 elif object.objls[i] == "Name":
                     if is_material:
@@ -47,9 +50,9 @@ def to_dict(objects, is_material):
                 else:
                     dict[object.objls[i]] = object.obj[i]
             elif i < no_objls:
-                dict[object.objls[i]] = np.nan
+                dict[object.objls[i]] = np.nan #add a null if field is unpopulated
             else:
-                dict["Notes"] = np.nan
+                dict["Notes"] = np.nan #add empty notes field last
         dicts.append(dict)
     return dicts
 
