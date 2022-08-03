@@ -21,6 +21,7 @@
  *                                                                         *
  ***************************************************************************/
 """
+from unittest import result
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
@@ -45,7 +46,6 @@ from qgis.core import Qgis
 from qgis.core import NULL as qgis_null
 import time
 import shutil
-from eppy.modeleditor import IDF, IDDAlreadySetError
 import numpy as np
 
 class SimstockQGIS:
@@ -118,6 +118,7 @@ class SimstockQGIS:
             self.qgis_python_location = qgis_python_dir + "/bin/python3"
 
         # Set up Eppy TODO: check if this works all the time
+        from eppy.modeleditor import IDF, IDDAlreadySetError
         if self.system in ['windows', 'linux', 'darwin']:
             iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
         try:
@@ -125,6 +126,7 @@ class SimstockQGIS:
         except IDDAlreadySetError:
             pass
         
+    
     
     def initial_setup(self):
         print("Initial setup button pressed")
@@ -329,9 +331,10 @@ class SimstockQGIS:
             pass #don't do anything if OK was pressed
             
     def run_ep(self, idf_path):
-        output_dir = idf_path[:-4]
+        idf_fname = os.path.basename(idf_path)
+        output_dir = idf_fname[:-4]
         #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_path])
-        subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_path]) #no readvarseso
+        subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname], cwd=self.idf_dir) #no readvarseso
 
     def run_plugin(self):
         # Check if initial setup worked
@@ -356,6 +359,15 @@ class SimstockQGIS:
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
             self.simulation_started = True
+
+            # Set up Eppy
+            from eppy.modeleditor import IDF, IDDAlreadySetError
+            if self.system in ['windows', 'linux', 'darwin']:
+                iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+            try:
+                IDF.setiddname(iddfile)
+            except IDDAlreadySetError:
+                pass
 
             ### EXTRACT DATA
             # Get layer, check exists and extract features
@@ -415,7 +427,7 @@ class SimstockQGIS:
                 else: # Parallel processing
                     print("Running EnergyPlus simulation on multiple cores...")
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py") #TODO: change epw file in mp script
-                    #out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
+                    out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
                     #    f.write(str(out))# + "\n")
                 
@@ -450,8 +462,8 @@ class SimstockQGIS:
             # Create new layer in memory for the results
             mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", "results_layer", "memory")
             mem_layer_data = mem_layer.dataProvider()
-            attr = self.selectedLayer.dataProvider().fields().toList() # QgsField type
-            fields = self.selectedLayer.fields() # QgsFields type
+            layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
+            layer_fields = self.selectedLayer.fields() # QgsFields type
 
             # Extract the results from the csvs by thermal zone
             def getzones(idf):
@@ -471,7 +483,7 @@ class SimstockQGIS:
             def make_allresults_dict():
                 """Returns a dict where the key is the name of the thermal
                 zone and the value is a df containing all results."""
-                results = {}
+                all_results = {}
                 for dir in self.idf_result_dirs:
                     df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
                     idf = IDF(dir + ".idf")
@@ -480,12 +492,13 @@ class SimstockQGIS:
                     for zone in zonelist:
                         zonename = zone.upper() #E+ outputs zone names in caps in results
                         zonecols = [col for col in df.columns if zonename in col]
-                        results[zone] = df[zonecols]
-                return results
+                        all_results[zone] = df[zonecols]
+                return all_results
 
-            def extract_results(results):
+            def extract_results(all_results):
                 """Extracts the results of interest from the individual dfs."""
-                for zone, df in results.items():
+                extracted_results = {}
+                for zone, df in all_results.items():
                     output_name = "Zone Operative Temperature"
                     threshold_val = 18.0 #threshold to report hours above/below
                     operative_col = [col for col in df.columns if output_name in col]
@@ -497,10 +510,13 @@ class SimstockQGIS:
                     elec_col = [col for col in df.columns if output_name in col]
                     elec_series = df[elec_col[0]] #should only be one col
                     elec = elec_series.sum()
-                    print(zone,": ", above, below, elec)
+                    lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
+                    lst = list(map(float, lst)) #change from np float to float
+                    extracted_results[zone] = lst
+                return extracted_results
             
             all_results = make_allresults_dict()
-            extract_results(all_results)
+            extracted_results = extract_results(all_results)
 
             # Add new attribute types for the results
             max_floors = int(self.preprocessed_df['nofloors'].max())
@@ -513,20 +529,20 @@ class SimstockQGIS:
                 number of floors."""
                 new_attrs = []
                 new_attrs.append(QgsField('bi_ref', QVariant.String))
-                for attr_name in attr_types:
-                    for i in range(max_floors):
-                        attr_name_floor = attr_name + ": FLOOR_" + str(i)
+                for i in range(max_floors):
+                    for attr_name in attr_types:
+                        attr_name_floor = "FLOOR_" + str(i) + ": " + attr_name
                         new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
                 attr_names = [attr.name() for attr in new_attrs]
                 return new_attrs, attr_names
 
             new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
             for new_attr in new_attrs:
-                fields.append(new_attr)
-            attr.extend(new_attrs)
+                layer_fields.append(new_attr)
+            layer_attrs.extend(new_attrs)
 
-            def add_results_to_features(fields):
-                # Set the attribute values themselves
+            def add_results_to_features(fields, extracted_results):
+                """Adds the new attributes to the features and populates their values."""
                 for i in range(len(self.features)):
                     # Update the feature to gain the new fields object
                     self.features[i].setFields(fields, initAttributes=False)
@@ -540,22 +556,21 @@ class SimstockQGIS:
                     # Find the BI ref
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
 
-                    # TODO: add for loop here to add results from dict
-
                     # Append the new results
-                    result_vals = [bi_ref, 2.546]
+                    result_vals = [bi_ref]
+                    thermal_zones = [zone for zone in extracted_results.keys() if osgb in zone]#.sort() #TODO: get sort to work (try sorted(dict))
+                    if len(thermal_zones) != 0:
+                        for zone in thermal_zones:
+                            result_vals.extend(extracted_results[zone]) #TODO: verify if order is correct
                     feature_attrs.extend(result_vals)
-                    # TODO: work out how to add a different number of vals for each
-                    # can add fewer vals and gives null for missing fields
-                    # probably unavoidable due to how the attribute tab works
 
                     # Set the feature's attributes
                     self.features[i].setAttributes(feature_attrs)
             
-            add_results_to_features(fields)
+            add_results_to_features(layer_fields, extracted_results)
             
             # Add the attributes into the new layer and push it to QGIS
-            mem_layer_data.addAttributes(attr)
+            mem_layer_data.addAttributes(layer_attrs)
             mem_layer.updateFields()
             mem_layer_data.addFeatures(self.features)
             QgsProject.instance().addMapLayer(mem_layer)
@@ -727,13 +742,13 @@ class SimstockQGIS:
             return dict
 
         # Set up Eppy
-#        from eppy.modeleditor import IDF, IDDAlreadySetError
-#        if self.system in ['windows', 'linux', 'darwin']:
-#            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
-#        try:
-#            IDF.setiddname(iddfile)
-#        except IDDAlreadySetError:
-#            pass
+        from eppy.modeleditor import IDF, IDDAlreadySetError
+        if self.system in ['windows', 'linux', 'darwin']:
+            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+        try:
+            IDF.setiddname(iddfile)
+        except IDDAlreadySetError:
+            pass
 
         idf = IDF(os.path.join(self.plugin_dir, 'base.idf'))
         
