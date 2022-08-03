@@ -46,7 +46,7 @@ def main():
     idf = IDF(ep_basic_settings)
 
     # Load input data (preprocessing outputs)
-    df = pd.read_csv(input_data)
+    df = pd.read_csv(input_data, dtype={'construction':str})
     
     # Function which creates the idf(s)
     def createidfs(df, mode):

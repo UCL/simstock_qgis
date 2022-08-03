@@ -27,7 +27,7 @@ def main():
 
     # Load the raw data into pandas dataframe
     datafile = args.datafile
-    df = pd.read_csv(os.path.join(ROOT_DIR, datafile))
+    df = pd.read_csv(os.path.join(ROOT_DIR, datafile), dtype={'construction':str})
     
     # Test polygons for validity and coordinates direction
     df['sa_reverse_coordinates'] = False
