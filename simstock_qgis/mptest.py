@@ -4,15 +4,20 @@ import multiprocessing as mp
 import os
 import platform
 import subprocess
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("idf_dir", help="The path to the idf files")
+args = parser.parse_args()
 
 class EP_Run():
-    def __init__(self):
+    def __init__(self, idf_dir):
         self.plugin_dir = os.path.dirname(__file__)
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-        self.idf_dir = os.path.join(self.plugin_dir, "idf_files")
+        self.idf_dir = idf_dir
         self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
-        files = os.scandir(os.path.abspath(self.idf_dir))
-        self.idf_files = [file.path for file in files if file.name[-4:] == ".idf"]
+        files = os.scandir(self.idf_dir)
+        self.idf_files = [file.name for file in files if file.name[-4:] == ".idf"]
         
         # Find the computer's operating system and find energyplus version
         system = platform.system().lower()
@@ -21,7 +26,8 @@ class EP_Run():
         
     def run_ep(self, idf_file):
         output_dir = idf_file[:-4]
-        subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
+        #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
+        subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file], cwd = self.idf_dir) #no readvarseso
         
     def run_ep_multi(self, cores):
         p = mp.Pool(cores)
@@ -30,9 +36,10 @@ class EP_Run():
     
 def main():
 
-    #multisquare(cores)
-    runner = EP_Run()
-    runner.run_ep_multi(8)
+    idf_dir = args.idf_dir
+    runner = EP_Run(idf_dir)
+    cores = mp.cpu_count() - 1 #use one less core than available
+    runner.run_ep_multi(cores)
 
 if __name__ == '__main__':
     main()
