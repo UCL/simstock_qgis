@@ -588,6 +588,8 @@ class SimstockQGIS:
             
             qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
 
+
+
     def load_database(self, file_exists):
         def csv_to_gpkg(database_csvs, database_layer_names):
             """
@@ -616,7 +618,7 @@ class SimstockQGIS:
 
         # Find database csvs which contain the default constructions/materials
         self.database_dir = os.path.join(self.plugin_dir, "Database")
-        database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv"]
+        database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:9] == "Database-"]
         database_layer_names = [file.name[:-4] for file in database_csvs]
 
         # If the database gpkg doesn't exit, create it from the csvs
@@ -677,7 +679,7 @@ class SimstockQGIS:
         """Adds materials and constructions to the basic settings idf based on 
         what is in the database files."""
 
-        def create_mat_dicts(df):
+        def create_obj_dicts(df):
             """Converts database dataframe to a list of dictionaries, ignoring 
             both null and notes fields"""
             dict_list = []
@@ -706,15 +708,15 @@ class SimstockQGIS:
                 dict_list.append(d)
             return dict_list
 
-        def add_constructions(construction_dict):
+        def add_dict_objs_to_idf(obj_dict, class_name):
             """Adds construction objects to the idf."""
-            for const in construction_dict:
-                idf.newidfobject("CONSTRUCTION",**const)
+            for obj in obj_dict:
+                idf.newidfobject(class_name,**obj)
 
         def add_materials(key, material_df, used_materials):
             """Checks against required materials list, and adds those required 
             to the idf."""
-            materials = create_mat_dicts(material_df)
+            materials = create_obj_dicts(material_df)
             material_type = key[9:].replace("_", ":") #change names to match energyplus fields
             
             # Add the material properties to the specific instance of the material
@@ -762,13 +764,17 @@ class SimstockQGIS:
         # Convert database attribute tables to dataframes
         dfs = attributes_to_dfs(database_layers)
 
-        # Add constructions to idf
-        construction_df = dfs["Database-CONSTRUCTION"]
-        const = create_mat_dicts(construction_df)
-        add_constructions(const)
+        # Add non-material objects to idf
+        for key,df in dfs.items():
+            if not "MATERIAL" in key:
+                df = dfs[key]
+                class_name = key[9:]
+                obj_dict = create_obj_dicts(df)
+                add_dict_objs_to_idf(obj_dict, class_name)
 
-        # Get materials used in constructions
-        used_materials = get_required_materials(const)
+                # Get materials used in constructions
+                if "CONSTRUCTION" in key:
+                    used_materials = get_required_materials(obj_dict)
 
         # Add materials to idf
         for key, df in dfs.items():
