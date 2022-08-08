@@ -320,7 +320,7 @@ class SimstockQGIS:
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
         self.dlg.pbRunSim.clicked.connect(self.run_plugin)
         #self.dlg.pbOptions.clicked.connect(self.launch_options)
-        #self.dlg.pbOptions.clicked.connect(self.setup_basic_settings)
+        self.dlg.pbOptions.clicked.connect(self.test_run)
         self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
         
         # Run the dialog event loop
@@ -329,6 +329,9 @@ class SimstockQGIS:
         # See if OK was pressed
         if result:
             pass #don't do anything if OK was pressed
+
+    def test_run(self):
+        self.add_new_layer(results_mode=False)
             
     def run_ep(self, idf_path):
         idf_fname = os.path.basename(idf_path)
@@ -345,7 +348,6 @@ class SimstockQGIS:
         # Check if user cwd has been set
         if not self.cwd_set:
             raise RuntimeError("Please set the working directory first!")
-            #print("Removed raise error for testing purposes") #TODO: re-add this before distributing 
 
         # Setup basic settings idf from database materials/constructions
         self.setup_basic_settings()
@@ -359,15 +361,6 @@ class SimstockQGIS:
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
             self.simulation_started = True
-
-            # Set up Eppy
-            from eppy.modeleditor import IDF, IDDAlreadySetError
-            if self.system in ['windows', 'linux', 'darwin']:
-                iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
-            try:
-                IDF.setiddname(iddfile)
-            except IDDAlreadySetError:
-                pass
 
             ### EXTRACT DATA
             # Get layer, check exists and extract features
@@ -453,101 +446,113 @@ class SimstockQGIS:
             generate_rvis(self.idf_result_dirs)
             run_readvarseso(self.idf_result_dirs)
 
+            self.add_new_layer(results_mode=True)
+            qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
 
             
-            ### RESULTS HANDLING
-            # Change some of the existing attributes if necessary (probably not)
-            #self.features[0].setAttribute(1, "text")
+    ### RESULTS HANDLING
+    def add_new_layer(self, results_mode=True):
+        """
+        This currently has the whole results procedure including:
+            - Creating a new layer in memory
+            - Retrieving the results of interest by thermal zone
+            - Pushing the results back to the new layer
+            - Pushing the new layer to the QGIS console
+        TODO: move result fetching fns elsewhere.
+        """
+        # Set up Eppy
+        from eppy.modeleditor import IDF, IDDAlreadySetError
+        if self.system in ['windows', 'linux', 'darwin']:
+            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+        try:
+            IDF.setiddname(iddfile)
+        except IDDAlreadySetError:
+            pass
+
+        def getzones(idf):
+            '''Finds thermal zones in idf and outputs numpy array.'''
+            zones = idf.idfobjects['ZONELIST'][0] #get zonenames
+            lst = [""]*len(zones.fieldnames)    #initiate blank list
             
-            # Create new layer in memory for the results
-            mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", "results_layer", "memory")
-            mem_layer_data = mem_layer.dataProvider()
-            layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
-            layer_fields = self.selectedLayer.fields() # QgsFields type
+            for i, fieldname in enumerate(zones.fieldnames):
+                lst[i]=zones[fieldname]     #extract zonenames from eppy obj
+            
+            lst = np.array(lst)
+            lst = lst[lst!=""]      #strip blank objects out
+            zonelist = lst[2:]      #remove headers
+            
+            return zonelist
 
-            def getzones(idf):
-                '''Finds thermal zones in idf and outputs numpy array.'''
-                zones = idf.idfobjects['ZONELIST'][0] #get zonenames
-                lst = [""]*len(zones.fieldnames)    #initiate blank list
+        def make_allresults_dict():
+            """Returns a dict where the key is the name of the thermal
+            zone and the value is a df containing all results."""
+            all_results = {}
+            for dir in self.idf_result_dirs:
+                df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
+                idf = IDF(dir + ".idf")
+                zonelist = getzones(idf)
+
+                for zone in zonelist:
+                    zonename = zone.upper() #E+ outputs zone names in caps in results
+                    zonecols = [col for col in df.columns if zonename in col]
+                    all_results[zone] = df[zonecols]
+            return all_results
+
+        def extract_results(all_results):
+            """Extracts the results of interest from the individual dfs. 
+            This is currently quite inflexible and could be changed."""
+            extracted_results = {}
+            threshold_val = 18.0 #threshold to report hours above/below
+            for zone, df in all_results.items():
+                output_name = "Zone Operative Temperature"
+                operative_col = [col for col in df.columns if output_name in col]
+                operative_series = df[operative_col[0]] #should only be one col
+                above = operative_series[operative_series > threshold_val].count()
+                below = operative_series[operative_series <= threshold_val].count()
+
+                output_name = "Electricity"
+                elec_col = [col for col in df.columns if output_name in col]
+                elec_series = df[elec_col[0]] #should only be one col
+                elec = elec_series.sum()
+                lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
+                lst = list(map(float, lst)) #change from np float to float
+                extracted_results[zone] = lst
+            return extracted_results
+
+        def make_new_attrs(max_floors, attr_types):
+            """Creates a result field for each result type up to the max
+            number of floors."""
+            new_attrs = []
+
+            # Add the built island ref as a result
+            new_attrs.append(QgsField('bi_ref', QVariant.String))
+
+            # Must add the same number of fields to each feature
+            for i in range(max_floors):
+
+                # Loop over base result types
+                for attr_type in attr_types:
+
+                    # Prepend floor number to result base name
+                    attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
+
+                    # Using "Double" type (float) for all fields
+                    new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
+
+            # Get the names of each newly created attribute
+            attr_names = [attr.name() for attr in new_attrs]
+            return new_attrs, attr_names
+
+        def add_results_to_features(fields, results_mode, extracted_results=None):
+            """Adds the new attributes to the features and populates their values."""
+            for i in range(len(self.features)):
+                # Update the feature to gain the new fields object
+                self.features[i].setFields(fields, initAttributes=False)
                 
-                for i, fieldname in enumerate(zones.fieldnames):
-                    lst[i]=zones[fieldname]     #extract zonenames from eppy obj
+                # Grab the attributes from this feature
+                feature_attrs = self.features[i].attributes()
                 
-                lst = np.array(lst)
-                lst = lst[lst!=""]      #strip blank objects out
-                zonelist = lst[2:]      #remove headers
-                
-                return zonelist
-
-            def make_allresults_dict():
-                """Returns a dict where the key is the name of the thermal
-                zone and the value is a df containing all results."""
-                all_results = {}
-                for dir in self.idf_result_dirs:
-                    df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
-                    idf = IDF(dir + ".idf")
-                    zonelist = getzones(idf)
-
-                    for zone in zonelist:
-                        zonename = zone.upper() #E+ outputs zone names in caps in results
-                        zonecols = [col for col in df.columns if zonename in col]
-                        all_results[zone] = df[zonecols]
-                return all_results
-
-            def extract_results(all_results):
-                """Extracts the results of interest from the individual dfs. 
-                This is currently quite inflexible and could be changed."""
-                extracted_results = {}
-                threshold_val = 18.0 #threshold to report hours above/below
-                for zone, df in all_results.items():
-                    output_name = "Zone Operative Temperature"
-                    operative_col = [col for col in df.columns if output_name in col]
-                    operative_series = df[operative_col[0]] #should only be one col
-                    above = operative_series[operative_series > threshold_val].count()
-                    below = operative_series[operative_series <= threshold_val].count()
-
-                    output_name = "Electricity"
-                    elec_col = [col for col in df.columns if output_name in col]
-                    elec_series = df[elec_col[0]] #should only be one col
-                    elec = elec_series.sum()
-                    lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
-                    lst = list(map(float, lst)) #change from np float to float
-                    extracted_results[zone] = lst
-                return extracted_results
-
-            def make_new_attrs(max_floors, attr_types):
-                """Creates a result field for each result type up to the max
-                number of floors."""
-                new_attrs = []
-
-                # Add the built island ref as a result
-                new_attrs.append(QgsField('bi_ref', QVariant.String))
-
-                # Must add the same number of fields to each feature
-                for i in range(max_floors):
-
-                    # Loop over base result types
-                    for attr_type in attr_types:
-
-                        # Prepend floor number to result base name
-                        attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
-
-                        # Using "Double" type (float) for all fields
-                        new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
-
-                # Get the names of each newly created attribute
-                attr_names = [attr.name() for attr in new_attrs]
-                return new_attrs, attr_names
-
-            def add_results_to_features(fields, extracted_results):
-                """Adds the new attributes to the features and populates their values."""
-                for i in range(len(self.features)):
-                    # Update the feature to gain the new fields object
-                    self.features[i].setFields(fields, initAttributes=False)
-                    
-                    # Grab the attributes from this feature
-                    feature_attrs = self.features[i].attributes()
-                    
+                if results_mode:
                     # Get the unique id for polygon
                     osgb = self.features[i].attribute("osgb")
 
@@ -562,46 +567,72 @@ class SimstockQGIS:
                             result_vals.extend(extracted_results[zone]) #TODO: verify if order is correct
                     feature_attrs.extend(result_vals)
 
-                    # Set the feature's attributes
-                    self.features[i].setAttributes(feature_attrs)
-            
+                # Set the feature's attributes
+                self.features[i].setAttributes(feature_attrs)
+
+        # Change some of the existing attributes if necessary (probably not)
+        #self.features[0].setAttribute(1, "text")
+
+        if not results_mode:
+            self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
+
+        # Create new layer in memory for the results
+        if results_mode:
+            new_layer_name = self.selectedLayer.name() + "_Simstock_results"
+        else:
+            new_layer_name = self.selectedLayer.name() + "_1"
+        mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", new_layer_name, "memory")
+        mem_layer_data = mem_layer.dataProvider()
+        layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
+        layer_fields = self.selectedLayer.fields() # QgsFields type
+
+        if results_mode:
             # Extract the results from the csvs by thermal zone
             all_results = make_allresults_dict()
             extracted_results = extract_results(all_results)
 
-            # The base names of the results fields to be added (floor number will be appended to these)
+        # The base names of the results fields to be added (floor number will be appended to these)
+        if results_mode:
             attr_types = ["Hours above operative temperature",
-                          "Hours below operative temperature",
-                          "Electricity consumption"]
-            
-            # Add new attribute types for the results
+                            "Hours below operative temperature",
+                            "Electricity consumption"]
+        else:
+            attr_types = ["use"]
+            self.features = [feature for feature in self.selectedLayer.getFeatures()]
+            nofloors = [feature["nofloors"] for feature in self.features]
+            max_floors = max(nofloors)
+        
+        # Add new attribute types for the results
+        if results_mode:
             max_floors = int(self.preprocessed_df['nofloors'].max())
-            new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
-            for new_attr in new_attrs:
-                layer_fields.append(new_attr)
-            layer_attrs.extend(new_attrs)
-            
-            # Add the actual result values and push to features
-            add_results_to_features(layer_fields, extracted_results)
-            
-            # Add the attributes into the new layer and push it to QGIS
-            mem_layer_data.addAttributes(layer_attrs)
-            mem_layer.updateFields()
-            mem_layer_data.addFeatures(self.features)
-            QgsProject.instance().addMapLayer(mem_layer)
+        new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
 
-            # Check the capabilities of the layer
-            #caps = mem_layer.dataProvider().capabilities()
-            #if caps & QgsVectorDataProvider.AddFeatures:
-            #    print("can")
-            
-            # Refresh the map if necessary
-            if qgis.utils.iface.mapCanvas().isCachingEnabled():
-                self.selectedLayer.triggerRepaint()
-            else:
-                qgis.utils.iface.mapCanvas().refresh()
-            
-            qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
+        for new_attr in new_attrs:
+            layer_fields.append(new_attr)
+        layer_attrs.extend(new_attrs)
+        
+        # Add the actual result values and push to features
+        if results_mode:
+            add_results_to_features(layer_fields, results_mode, extracted_results)
+        else:
+            add_results_to_features(layer_fields, results_mode)
+        
+        # Add the attributes into the new layer and push it to QGIS
+        mem_layer_data.addAttributes(layer_attrs)
+        mem_layer.updateFields()
+        mem_layer_data.addFeatures(self.features)
+        QgsProject.instance().addMapLayer(mem_layer)
+
+        # Check the capabilities of the layer
+        #caps = mem_layer.dataProvider().capabilities()
+        #if caps & QgsVectorDataProvider.AddFeatures:
+        #    print("can")
+        
+        # Refresh the map if necessary
+        if qgis.utils.iface.mapCanvas().isCachingEnabled():
+            self.selectedLayer.triggerRepaint()
+        else:
+            qgis.utils.iface.mapCanvas().refresh()
 
 
 
@@ -683,7 +714,7 @@ class SimstockQGIS:
         self.idf_dir = os.path.join(self.user_cwd, "idf_files")
         
         print("Loading database...")
-        
+
         # First check for existing database layers and remove them
         layers = QgsProject.instance().mapLayers()
         database_layer_ids = []
