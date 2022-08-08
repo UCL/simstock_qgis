@@ -466,7 +466,7 @@ class SimstockQGIS:
             layer_fields = self.selectedLayer.fields() # QgsFields type
 
             def getzones(idf):
-                '''Finds zones in idf and outputs numpy array'''
+                '''Finds thermal zones in idf and outputs numpy array.'''
                 zones = idf.idfobjects['ZONELIST'][0] #get zonenames
                 lst = [""]*len(zones.fieldnames)    #initiate blank list
                 
@@ -495,7 +495,8 @@ class SimstockQGIS:
                 return all_results
 
             def extract_results(all_results):
-                """Extracts the results of interest from the individual dfs."""
+                """Extracts the results of interest from the individual dfs. 
+                This is currently quite inflexible and could be changed."""
                 extracted_results = {}
                 threshold_val = 18.0 #threshold to report hours above/below
                 for zone, df in all_results.items():
@@ -518,11 +519,23 @@ class SimstockQGIS:
                 """Creates a result field for each result type up to the max
                 number of floors."""
                 new_attrs = []
+
+                # Add the built island ref as a result
                 new_attrs.append(QgsField('bi_ref', QVariant.String))
+
+                # Must add the same number of fields to each feature
                 for i in range(max_floors):
+
+                    # Loop over base result types
                     for attr_type in attr_types:
+
+                        # Prepend floor number to result base name
                         attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
+
+                        # Using "Double" type (float) for all fields
                         new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
+
+                # Get the names of each newly created attribute
                 attr_names = [attr.name() for attr in new_attrs]
                 return new_attrs, attr_names
 
@@ -556,11 +569,12 @@ class SimstockQGIS:
             all_results = make_allresults_dict()
             extracted_results = extract_results(all_results)
 
-            # Add new attribute types for the results
+            # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = ["Hours above operative temperature",
                           "Hours below operative temperature",
                           "Electricity consumption"]
             
+            # Add new attribute types for the results
             max_floors = int(self.preprocessed_df['nofloors'].max())
             new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
             for new_attr in new_attrs:
@@ -597,28 +611,37 @@ class SimstockQGIS:
             Converts csvs to a single geopackage file that can be loaded and edited.
             May be better to remove this from the plugin and start from the gpkg point.
             """
+
+            # These are necessary arguments for writing gpkg layers
             context = QgsCoordinateTransformContext()
             o_save_options = QgsVectorFileWriter.SaveVectorOptions()
 
             for i, file in enumerate(database_csvs):
+
+                # Load the csv as a vector layer
                 uri = "file:///" + file.path + "?delimiter={}".format(",")
                 vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
+
+                # First layer addition to gpkg must be done differently to the rest
                 if i == 0:
                     o_save_options.layerName = database_layer_names[i]
                     writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
+
+                # Add the remaining layers
                 else: 
-                    # Subsequent layers must be added differently to the first
                     o_save_options.actionOnExistingFile = QgsVectorFileWriter.CreateOrOverwriteLayer 
                     o_save_options.EditionCapability = QgsVectorFileWriter.CanAddNewLayer
                     o_save_options.layerName = database_layer_names[i]
                     writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
 
         def load_all_layers_from_gpkg(gpkg, layer_names):
+            """Loads all layers from a gpkg file when given their names as a list."""
             for layer in layer_names:
                 qgis.utils.iface.addVectorLayer(gpkg + "|layername=" + layer, layer, 'ogr')
 
         # Find database csvs which contain the default constructions/materials
         self.database_dir = os.path.join(self.plugin_dir, "Database")
+        # TODO: may have to change this and other lines if naming scheme is changed
         database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:9] == "Database-"]
         database_layer_names = [file.name[:-4] for file in database_csvs]
 
@@ -647,6 +670,7 @@ class SimstockQGIS:
         # User specified directory for output
         self.user_cwd = self.dlg.mQgsFileWidget.filePath()
 
+        # Check path provided
         if self.user_cwd == "":
             raise FileNotFoundError("Please enter a directory.")
         if not os.path.exists(self.user_cwd):
@@ -659,6 +683,7 @@ class SimstockQGIS:
         self.idf_dir = os.path.join(self.user_cwd, "idf_files")
         
         print("Loading database...")
+        
         # First check for existing database layers and remove them
         layers = QgsProject.instance().mapLayers()
         database_layer_ids = []
