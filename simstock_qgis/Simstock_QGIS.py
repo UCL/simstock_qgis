@@ -429,7 +429,7 @@ class SimstockQGIS:
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py") #TODO: change epw file in mp script
                     out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-                    #    f.write(str(out))# + "\n")
+                    #    f.write(str(out))# + "\n") #for debugging purposes only
                 
                 idf_result_dirs = []
                 for idf_path in self.idf_files:
@@ -465,7 +465,6 @@ class SimstockQGIS:
             layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
             layer_fields = self.selectedLayer.fields() # QgsFields type
 
-            # Extract the results from the csvs by thermal zone
             def getzones(idf):
                 '''Finds zones in idf and outputs numpy array'''
                 zones = idf.idfobjects['ZONELIST'][0] #get zonenames
@@ -498,9 +497,9 @@ class SimstockQGIS:
             def extract_results(all_results):
                 """Extracts the results of interest from the individual dfs."""
                 extracted_results = {}
+                threshold_val = 18.0 #threshold to report hours above/below
                 for zone, df in all_results.items():
                     output_name = "Zone Operative Temperature"
-                    threshold_val = 18.0 #threshold to report hours above/below
                     operative_col = [col for col in df.columns if output_name in col]
                     operative_series = df[operative_col[0]] #should only be one col
                     above = operative_series[operative_series > threshold_val].count()
@@ -514,15 +513,6 @@ class SimstockQGIS:
                     lst = list(map(float, lst)) #change from np float to float
                     extracted_results[zone] = lst
                 return extracted_results
-            
-            all_results = make_allresults_dict()
-            extracted_results = extract_results(all_results)
-
-            # Add new attribute types for the results
-            max_floors = int(self.preprocessed_df['nofloors'].max())
-            attr_types = ["Hours above operative temperature",
-                          "Hours below operative temperature",
-                          "Electricity consumption"]
 
             def make_new_attrs(max_floors, attr_types):
                 """Creates a result field for each result type up to the max
@@ -530,16 +520,11 @@ class SimstockQGIS:
                 new_attrs = []
                 new_attrs.append(QgsField('bi_ref', QVariant.String))
                 for i in range(max_floors):
-                    for attr_name in attr_types:
-                        attr_name_floor = "FLOOR_" + str(i) + ": " + attr_name
+                    for attr_type in attr_types:
+                        attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
                         new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
                 attr_names = [attr.name() for attr in new_attrs]
                 return new_attrs, attr_names
-
-            new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
-            for new_attr in new_attrs:
-                layer_fields.append(new_attr)
-            layer_attrs.extend(new_attrs)
 
             def add_results_to_features(fields, extracted_results):
                 """Adds the new attributes to the features and populates their values."""
@@ -559,7 +544,7 @@ class SimstockQGIS:
                     # Append the new results
                     result_vals = [bi_ref]
                     thermal_zones = [zone for zone in extracted_results.keys() if osgb in zone]#.sort() #TODO: get sort to work (try sorted(dict))
-                    if len(thermal_zones) != 0:
+                    if len(thermal_zones) != 0: #ignore shading blocks
                         for zone in thermal_zones:
                             result_vals.extend(extracted_results[zone]) #TODO: verify if order is correct
                     feature_attrs.extend(result_vals)
@@ -567,6 +552,22 @@ class SimstockQGIS:
                     # Set the feature's attributes
                     self.features[i].setAttributes(feature_attrs)
             
+            # Extract the results from the csvs by thermal zone
+            all_results = make_allresults_dict()
+            extracted_results = extract_results(all_results)
+
+            # Add new attribute types for the results
+            attr_types = ["Hours above operative temperature",
+                          "Hours below operative temperature",
+                          "Electricity consumption"]
+            
+            max_floors = int(self.preprocessed_df['nofloors'].max())
+            new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
+            for new_attr in new_attrs:
+                layer_fields.append(new_attr)
+            layer_attrs.extend(new_attrs)
+            
+            # Add the actual result values and push to features
             add_results_to_features(layer_fields, extracted_results)
             
             # Add the attributes into the new layer and push it to QGIS
@@ -628,11 +629,15 @@ class SimstockQGIS:
         # Add the database layers
         load_all_layers_from_gpkg(self.gpkg_path, database_layer_names)
 
+
+
     def launch_options(self):
         from .Simstock_QGIS_dialog import YourDialog
         self.dlg2 = YourDialog()
         self.dlg2.show()
     
+
+
     def set_cwd(self):
         """
         Sets the input path as the cwd. Used for outputting idfs and database files.
@@ -675,6 +680,8 @@ class SimstockQGIS:
         self.cwd_set = True
         print("Current working directory set to: ", self.user_cwd)
 
+
+
     def setup_basic_settings(self):
         """Adds materials and constructions to the basic settings idf based on 
         what is in the database files."""
@@ -709,7 +716,7 @@ class SimstockQGIS:
             return dict_list
 
         def add_dict_objs_to_idf(obj_dict, class_name):
-            """Adds construction objects to the idf."""
+            """Adds objects to the idf."""
             for obj in obj_dict:
                 idf.newidfobject(class_name,**obj)
 
@@ -752,6 +759,7 @@ class SimstockQGIS:
         except IDDAlreadySetError:
             pass
 
+        # Initialise base idf which will become the basic_settings idf for Simstock
         idf = IDF(os.path.join(self.plugin_dir, 'base.idf'))
         
         # Find database layers in current project
