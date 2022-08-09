@@ -339,7 +339,6 @@ class SimstockQGIS:
     def run_ep(self, idf_path):
         idf_fname = os.path.basename(idf_path)
         output_dir = idf_fname[:-4]
-        #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_path])
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname], cwd=self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode != 0:
             raise RuntimeError(out.stderr)
@@ -358,9 +357,6 @@ class SimstockQGIS:
 
         # Setup basic settings idf from database materials/constructions
         self.setup_basic_settings()
-
-        # Button signal is sent twice; this attempts to prevent function launching twice in quick succession
-        #time_now = time.perf_counter() #TODO: make this better, maybe with a refresh button
         
         if self.simulation_started:
             print("Please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
@@ -755,16 +751,37 @@ class SimstockQGIS:
         """Adds materials and constructions to the basic settings idf based on 
         what is in the database files."""
 
-        def create_obj_dicts(df):
-            """Converts database dataframe to a list of dictionaries, ignoring 
-            both null and notes fields"""
+        def create_obj_dicts(df, dfname=None):
+            """
+            Converts database dataframe to a list of dictionaries, ignoring 
+            both null and notes fields.
+            
+            Each dict within the returned list corresponds to a standalone idf object. 
+            The keys represent the field names of the idf object."""
             dict_list = []
+
+            # Each row represents a standalone idf object, so loop over each
             for _, row in df.iterrows():
                 dictionary = {}
+
+                # Loop over elements within the row (i.e. fields of the idf object)
                 for i, content in enumerate(row):
+                    # Get the row header (i.e. field name)
                     label = row.index[i]
+
+                    # Only add the field if it has content and is not notes
                     if not content == qgis_null and not label == 'Notes': #using qgis nulltype instead of pd here
+
+                        # Next check avoids QGIS bug where it appends "_1" to numbered fields
+                        # when importing csv (e.g. "Field_1" becomes "Field_1_1")
+                        # TODO: find out if any other idf objects use numbered fields
+                        if dfname is not None and "schedule" in dfname.lower() and label[:5] == "Field":
+                            label = label[:-2]    
+
+                        # Add to dict    
                         dictionary[label] = content
+                
+                # Append individual dict corresponding to the idf object
                 dict_list.append(dictionary)
             return dict_list
 
@@ -845,8 +862,8 @@ class SimstockQGIS:
         for key,df in dfs.items():
             if not "MATERIAL" in key:
                 df = dfs[key]
-                class_name = key.split("-")[-1]
-                obj_dict = create_obj_dicts(df)
+                class_name = key.split("-")[-1].replace("_", ":") #change names to match energyplus fields
+                obj_dict = create_obj_dicts(df, key)
                 add_dict_objs_to_idf(obj_dict, class_name)
 
                 # Get materials used in constructions
