@@ -94,7 +94,7 @@ class SimstockQGIS:
         eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
         sys.path.append(eppy_dir)
 
-        # Various checks
+        # Various check trackers
         self.initial_setup_worked = None #check if initial setup worked
         self.simulation_started = False #check if the run button was pressed
         self.cwd_set = False #check if the user set the cwd
@@ -125,6 +125,9 @@ class SimstockQGIS:
             IDF.setiddname(iddfile)
         except IDDAlreadySetError:
             pass
+
+        # The prepended tag on database files used to identify them
+        self.database_tag = "DB-"
         
     
     
@@ -337,7 +340,11 @@ class SimstockQGIS:
         idf_fname = os.path.basename(idf_path)
         output_dir = idf_fname[:-4]
         #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_path])
-        subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname], cwd=self.idf_dir) #no readvarseso
+        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname], cwd=self.idf_dir, capture_output=True, text=True) #no readvarseso
+        if out.returncode != 0:
+            raise RuntimeError(out.stderr)
+        #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
+        #    f.write(str(out))# + "\n") #for debugging purposes only
 
     def run_plugin(self):
         # Check if initial setup worked
@@ -407,7 +414,7 @@ class SimstockQGIS:
 
             
             ### SIMULATION
-            def run_simulation(multiprocessing = True):
+            def run_simulation(multiprocessing = True): #TODO: maybe remove old results before simulating
                 #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
                 time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
                 
@@ -421,6 +428,8 @@ class SimstockQGIS:
                     print("Running EnergyPlus simulation on multiple cores...")
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py") #TODO: change epw file in mp script
                     out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
+                    if out.returncode != 0:
+                        raise RuntimeError(out.stderr)
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
                     #    f.write(str(out))# + "\n") #for debugging purposes only
                 
@@ -488,7 +497,10 @@ class SimstockQGIS:
             zone and the value is a df containing all results."""
             all_results = {}
             for dir in self.idf_result_dirs:
-                df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
+                try:
+                    df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
+                except pd.errors.EmptyDataError:
+                    raise RuntimeError("Results for '%s' not found. Check EnergyPlus .err file" % os.path.basename(dir))
                 idf = IDF(dir + ".idf")
                 zonelist = getzones(idf)
 
@@ -519,13 +531,14 @@ class SimstockQGIS:
                 extracted_results[zone] = lst
             return extracted_results
 
-        def make_new_attrs(max_floors, attr_types):
+        def make_new_attrs(max_floors, attr_types, results_mode):
             """Creates a result field for each result type up to the max
             number of floors."""
             new_attrs = []
 
-            # Add the built island ref as a result
-            new_attrs.append(QgsField('bi_ref', QVariant.String))
+            if results_mode:
+                # Add the built island ref as a result
+                new_attrs.append(QgsField('bi_ref', QVariant.String))
 
             # Must add the same number of fields to each feature
             for i in range(max_floors):
@@ -570,17 +583,18 @@ class SimstockQGIS:
                 # Set the feature's attributes
                 self.features[i].setAttributes(feature_attrs)
 
+
         # Change some of the existing attributes if necessary (probably not)
         #self.features[0].setAttribute(1, "text")
 
-        if not results_mode:
-            self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
-
-        # Create new layer in memory for the results
+        # Set name for new layer to be created
         if results_mode:
             new_layer_name = self.selectedLayer.name() + "_Simstock_results"
         else:
+            self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
             new_layer_name = self.selectedLayer.name() + "_1"
+
+        # Create new layer in memory for the results
         mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", new_layer_name, "memory")
         mem_layer_data = mem_layer.dataProvider()
         layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
@@ -591,11 +605,12 @@ class SimstockQGIS:
             all_results = make_allresults_dict()
             extracted_results = extract_results(all_results)
 
-        # The base names of the results fields to be added (floor number will be appended to these)
-        if results_mode:
+            # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = ["Hours above operative temperature",
                             "Hours below operative temperature",
                             "Electricity consumption"]
+            max_floors = int(self.preprocessed_df['nofloors'].max())
+
         else:
             attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
@@ -603,9 +618,7 @@ class SimstockQGIS:
             max_floors = max(nofloors)
         
         # Add new attribute types for the results
-        if results_mode:
-            max_floors = int(self.preprocessed_df['nofloors'].max())
-        new_attrs, attr_names = make_new_attrs(max_floors, attr_types)
+        new_attrs, attr_names = make_new_attrs(max_floors, attr_types, results_mode)
 
         for new_attr in new_attrs:
             layer_fields.append(new_attr)
@@ -673,7 +686,7 @@ class SimstockQGIS:
         # Find database csvs which contain the default constructions/materials
         self.database_dir = os.path.join(self.plugin_dir, "Database")
         # TODO: may have to change this and other lines if naming scheme is changed
-        database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:9] == "Database-"]
+        database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:len(self.database_tag)] == self.database_tag]
         database_layer_names = [file.name[:-4] for file in database_csvs]
 
         # If the database gpkg doesn't exit, create it from the csvs
@@ -719,7 +732,7 @@ class SimstockQGIS:
         layers = QgsProject.instance().mapLayers()
         database_layer_ids = []
         for _, layer in layers.items():
-            if layer.name()[:9] == "Database-": #find database layers
+            if layer.name()[:len(self.database_tag)] == self.database_tag: #find database layers
                 database_layer_ids.append(layer.id())
         QgsProject.instance().removeMapLayers(database_layer_ids)
 
@@ -780,7 +793,7 @@ class SimstockQGIS:
             """Checks against required materials list, and adds those required 
             to the idf."""
             materials = create_obj_dicts(material_df)
-            material_type = key[9:].replace("_", ":") #change names to match energyplus fields
+            material_type = key.split("-")[-1].replace("_", ":") #change names to match energyplus fields
             
             # Add the material properties to the specific instance of the material
             new_list=[]    
@@ -822,7 +835,7 @@ class SimstockQGIS:
         layers = QgsProject.instance().mapLayers()
         database_layers = []
         for _, layer in layers.items():
-            if layer.name()[:9] == "Database-": 
+            if layer.name()[:len(self.database_tag)] == self.database_tag: 
                 database_layers.append(layer)
 
         # Convert database attribute tables to dataframes
@@ -832,7 +845,7 @@ class SimstockQGIS:
         for key,df in dfs.items():
             if not "MATERIAL" in key:
                 df = dfs[key]
-                class_name = key[9:]
+                class_name = key.split("-")[-1]
                 obj_dict = create_obj_dicts(df)
                 add_dict_objs_to_idf(obj_dict, class_name)
 
