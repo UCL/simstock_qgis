@@ -27,7 +27,9 @@ class EP_Run():
     def run_ep(self, idf_file):
         output_dir = idf_file[:-4]
         #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
-        subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file], cwd = self.idf_dir) #no readvarseso
+        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file], cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
+        if out.returncode == 1:
+            raise RuntimeError(out.stderr)
         
     def run_ep_multi(self, cores):
         p = mp.Pool(cores)
