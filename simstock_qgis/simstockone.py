@@ -4,7 +4,7 @@ from ast import literal_eval
 from shapely.ops import unary_union, linemerge
 from shapely.wkt import loads, dumps
 from time import time, localtime, strftime
-from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing
+from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing, MultiPolygon
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -21,6 +21,9 @@ def main():
 
     # Load the raw data into pandas dataframe
     df = pd.read_csv(os.path.join(ROOT_DIR, 'sa_data.csv'))
+
+    # Check for nested polygons
+    df = check_for_multipolygon(df)
 
     # Test polygons for validity and coordinates direction
     df['sa_reverse_coordinates'] = False
@@ -64,6 +67,19 @@ def main():
 
 
 # END OF MAIN  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def check_for_multipolygon(df):
+    """
+    Hand-drawn polygons can be multipolygons with len 1, i.e. a nested 
+    polygon within a multipolygon wrapper. This aims to extract them.
+    """
+    for index, row in df.iterrows(): #TODO: re-write with itertuples
+        polygon = loads(row.polygon)
+        if isinstance(polygon, MultiPolygon) and len(polygon) == 1:
+            df.at[index, 'polygon'] = str(polygon[0])
+        else:
+            raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
+    return df
 
 def bi_adj(df):
     df['polygon'] = df['polygon'].apply(loads)
