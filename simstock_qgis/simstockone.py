@@ -75,10 +75,11 @@ def check_for_multipolygon(df):
     """
     for index, row in df.iterrows(): #TODO: re-write with itertuples
         polygon = loads(row.polygon)
-        if isinstance(polygon, MultiPolygon) and len(polygon) == 1:
-            df.at[index, 'polygon'] = str(polygon[0])
-        else:
-            raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
+        if isinstance(polygon, MultiPolygon):
+            if len(polygon) == 1:
+                df.at[index, 'polygon'] = str(polygon[0])
+            else:
+                raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
     return df
 
 def bi_adj(df):
