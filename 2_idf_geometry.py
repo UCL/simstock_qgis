@@ -104,6 +104,8 @@ def main():
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
         
+        # TODO: fix bug where powershell will add a "./" before the filename argument and
+        # this then gets added to the building field within the idf. Can cause issues.
         if mode == "single":
             idf.saveas(os.path.join(IDF_DIR, '{}.idf'.format(datafilename)))
         elif mode == "bi":
