@@ -658,7 +658,7 @@ class SimstockQGIS:
 
             for i, file in enumerate(database_csvs):
 
-                # Load the csv as a vector layer
+                # Load the csv as a vector layer #TODO: find out how to specify data type for some columns
                 uri = "file:///" + file.path + "?delimiter={}".format(",")
                 vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
 
@@ -681,9 +681,8 @@ class SimstockQGIS:
 
         # Find database csvs which contain the default constructions/materials
         self.database_dir = os.path.join(self.plugin_dir, "Database")
-        # TODO: may have to change this and other lines if naming scheme is changed
         database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:len(self.database_tag)] == self.database_tag]
-        database_layer_names = [file.name[:-4] for file in database_csvs]
+        database_layer_names = [file.name[:-4] for file in database_csvs] #TODO: remove and use .name method in place
 
         # If the database gpkg doesn't exit, create it from the csvs
         if not file_exists:
@@ -776,7 +775,7 @@ class SimstockQGIS:
                         # when importing csv (e.g. "Field_1" becomes "Field_1_1")
                         # TODO: find out if any other idf objects use numbered fields
                         if dfname is not None and "schedule" in dfname.lower() and label[:5] == "Field":
-                            label = label[:-2]    
+                            label = label[:-2]
 
                         # Add to dict    
                         dictionary[label] = content
@@ -835,6 +834,12 @@ class SimstockQGIS:
                 df.drop(columns=['fid'], inplace=True)
                 dict[layer.name()] = df
             return dict
+        
+        def bool_quick_fix(dfs):
+            """To delete"""
+            dfs["DB-Fabric-WINDOWMATERIAL_GLAZING"]["Solar_Diffusing"] = "No"
+            dfs["DB-Loads-PEOPLE"]["Enable_ASHRAE_55_Comfort_Warnings"] = "No"
+
 
         # Set up Eppy
         from eppy.modeleditor import IDF, IDDAlreadySetError
@@ -857,6 +862,10 @@ class SimstockQGIS:
 
         # Convert database attribute tables to dataframes
         dfs = attributes_to_dfs(database_layers)
+
+        # This is a temporary quick fix to avoid certain fields being incorrectly
+        # identified as bool type meaning that "No" is changed to "0"
+        bool_quick_fix(dfs)
 
         # Add non-material objects to idf
         for key,df in dfs.items():
