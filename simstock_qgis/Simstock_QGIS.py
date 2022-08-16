@@ -160,7 +160,12 @@ class SimstockQGIS:
             try:
                 chmod_cmd = subprocess.run("chmod +x '%s'" % self.energyplusexe, shell=True, check=True)
             except subprocess.CalledProcessError:
-                self.initial_tests.append("Chmod command failed.")
+                self.initial_tests.append("Chmod command failed on E+.")
+
+            try:
+                chmod_cmd = subprocess.run("chmod +x '%s'" % self.readvarseso, shell=True, check=True)
+            except subprocess.CalledProcessError:
+                self.initial_tests.append("Chmod command failed on ReadVarsESO.")
             
             # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
             shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
@@ -170,6 +175,9 @@ class SimstockQGIS:
             run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', self.epw_file, shoebox_idf])
             if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
                 self.initial_tests.append("EnergyPlus could not run.")
+            
+            # Run a test to see if ReadVarsESO works
+            subprocess.run([self.readvarseso], cwd=shoebox_output)
             
             # Test that the QGIS Python works via subprocess
             run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
