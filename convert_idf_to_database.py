@@ -23,7 +23,12 @@ def main():
                "construction" : idf.idfobjects['CONSTRUCTION']}"""
     object_dict = {"people" : idf.idfobjects['PEOPLE'],
                    "electricequipment" : idf.idfobjects['ELECTRICEQUIPMENT'],
-                   "lights" : idf.idfobjects['LIGHTS']}
+                   "lights" : idf.idfobjects['LIGHTS'],
+                   "schedule_compact" : idf.idfobjects['SCHEDULE:COMPACT'],
+                   "ZONEINFILTRATION_DESIGNFLOWRATE" : idf.idfobjects['ZONEINFILTRATION:DESIGNFLOWRATE'],
+                   "ZONEVENTILATION_DESIGNFLOWRATE" : idf.idfobjects['ZONEVENTILATION:DESIGNFLOWRATE'],
+                   "ZONECONTROL_THERMOSTAT" : idf.idfobjects['ZONECONTROL:THERMOSTAT'],
+                   "THERMOSTATSETPOINT_DUALSETPOINT" : idf.idfobjects['THERMOSTATSETPOINT:DUALSETPOINT']}
     
     ### CONVERT TO CSV FILES:
     # Note that if the csv files already exist, they will be appended to
@@ -70,7 +75,7 @@ def convert_object_dicts(object_dict: dict):
 def dict_to_csv(object_dict):
     for object_type, objects in object_dict.items():
         if len(objects) != 0:
-            filename = "Database-" + object_type.upper() + ".csv"
+            filename = "TestDatabase-" + object_type.upper() + ".csv"
             df = pd.DataFrame.from_dict(objects)
             if os.path.exists(filename):
                 print("File: '%s' found. Appending to csv..." % filename)
