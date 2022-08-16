@@ -9,6 +9,9 @@ from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 import argparse
 
+### SPECIFY PATH TO E+ v8.9 IDD FILE HERE
+iddfile = r'C:\EnergyPlusV8-9-0\Energy+.idd'
+
 parser = argparse.ArgumentParser()
 parser.add_argument("datafile", help="provide a pre-processed file")
 parser.add_argument("-b", "--builtisland", action="store_true",
@@ -38,10 +41,11 @@ def main():
     print(strftime('%d/%m/%Y %H:%M:%S', localtime()),
           '- {} start time'.format(os.path.basename(__file__)), flush=True)
 
+    # Commented the below out as idd can be set manually at the top of the script
     # Find the computer's operating system and set path to E+ idd file
-    system = platform.system().lower()
-    if system in ['windows', 'linux', 'darwin']:
-        iddfile = os.path.join(EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
+    #system = platform.system().lower()
+    #if system in ['windows', 'linux', 'darwin']:
+    #    iddfile = os.path.join(EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
     IDF.setiddname(iddfile)
     idf = IDF(ep_basic_settings)
 
