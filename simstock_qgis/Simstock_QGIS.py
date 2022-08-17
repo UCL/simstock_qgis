@@ -162,10 +162,24 @@ class SimstockQGIS:
             except subprocess.CalledProcessError:
                 self.initial_tests.append("Chmod command failed on E+.")
 
+            # Same for ReadVarsESO
             try:
                 chmod_cmd = subprocess.run("chmod +x '%s'" % self.readvarseso, shell=True, check=True)
             except subprocess.CalledProcessError:
                 self.initial_tests.append("Chmod command failed on ReadVarsESO.")
+
+            # Same for sh script
+            mac_verify_ep = os.path.join(self.plugin_dir, "mac_verify_ep.sh")
+            try:
+                chmod_cmd = subprocess.run("chmod +x '%s'" % mac_verify_ep, shell=True, check=True)
+            except subprocess.CalledProcessError:
+                self.initial_tests.append("Chmod command failed on sh script.")
+            
+            # Call the sh script to bypass all the security warnings that occur when running E+
+            try:
+                subprocess.run(["bash", mac_verify_ep], check=True)
+            except subprocess.CalledProcessError:
+                self.initial_tests.append("Mac verify EnergyPlus sh script failed.")
             
             # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
             shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
