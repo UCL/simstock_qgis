@@ -83,10 +83,11 @@ def check_for_multipolygon(df):
     """
     for index, row in df.iterrows(): #TODO: re-write with itertuples
         polygon = loads(row.polygon)
-        if isinstance(polygon, MultiPolygon) and len(polygon) == 1:
-            df.at[index, 'polygon'] = str(polygon[0])
-        else:
-            raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
+        if isinstance(polygon, MultiPolygon):
+            if len(polygon) == 1:
+                df.at[index, 'polygon'] = str(polygon[0])
+            else:
+                raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
     return df
     
 def bi_adj(df):
@@ -110,7 +111,8 @@ def bi_adj(df):
             
         for i, row in gdf.iterrows():
             if row['sa_collinear_touching'] != row['adjacent']:
-                raise RuntimeError("built island mismatch")
+                print("BI mismatch: ", row['osgb'], row['sa_collinear_touching'], row['adjacent'])
+                #raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
                 
         modal_bi = gdf.bi.mode().values
@@ -186,6 +188,11 @@ def reverse_coordinates(df):
 
 
 def remove_duplicated_coordinates(df):
+    """
+    - Removes duplicate points from exterior ring
+    - Loops over each interior ring and removes duplicate points from each
+    - Dumps the new polygons in sa_polygon column whilst rounding them
+    """
     for row in df.itertuples():
         polygon = loads(row.polygon)
         ext_ring_coords = list(polygon.exterior.coords)
