@@ -551,7 +551,7 @@ class SimstockQGIS:
                 extracted_results[zone] = lst
             return extracted_results
 
-        def make_new_attrs(max_floors, attr_types, results_mode):
+        def new_attrs_all_floors(max_floors, attr_types, results_mode):
             """Creates a result field for each result type up to the max
             number of floors."""
             new_attrs = []
@@ -632,13 +632,17 @@ class SimstockQGIS:
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
-            attr_types = ["use"]
+            attr_types = ["use"] #TODO: comment this out if not required
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
             nofloors = [feature["nofloors"] for feature in self.features]
             max_floors = max(nofloors)
         
-        # Add new attribute types for the results
-        new_attrs, attr_names = make_new_attrs(max_floors, attr_types, results_mode)
+        # Add new attribute types for the results for all floors
+        new_attrs, attr_names = new_attrs_all_floors(max_floors, attr_types, results_mode)
+
+        # Add overhang depth attribute (not needed for every floor)
+        if not results_mode:
+            new_attrs.append(QgsField('overhang_depth', QVariant.Double))
 
         for new_attr in new_attrs:
             layer_fields.append(new_attr)
