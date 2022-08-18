@@ -47,6 +47,7 @@ from qgis.core import NULL as qgis_null
 import time
 import shutil
 import numpy as np
+import json
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -128,6 +129,10 @@ class SimstockQGIS:
 
         # The prepended tag on database files used to identify them
         self.database_tag = "DB-"
+
+        # Load config file
+        with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
+            self.config = json.load(read_file)
         
     
     
@@ -530,11 +535,10 @@ class SimstockQGIS:
                     all_results[zone] = df[zonecols]
             return all_results
 
-        def extract_results(all_results):
+        def extract_results(all_results, threshold_val):
             """Extracts the results of interest from the individual dfs. 
             This is currently quite inflexible and could be changed."""
             extracted_results = {}
-            threshold_val = 18.0 #threshold to report hours above/below
             for zone, df in all_results.items():
                 output_name = "Zone Operative Temperature"
                 operative_col = [col for col in df.columns if output_name in col]
@@ -623,7 +627,8 @@ class SimstockQGIS:
         if results_mode:
             # Extract the results from the csvs by thermal zone
             all_results = make_allresults_dict()
-            extracted_results = extract_results(all_results)
+            op_temp_threshold = float(self.config["Operative temperature threshold"])
+            extracted_results = extract_results(all_results, op_temp_threshold)
 
             # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = ["Hours above operative temperature",
