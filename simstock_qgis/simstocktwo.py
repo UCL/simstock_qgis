@@ -732,6 +732,10 @@ def thermal_zones(row, df, idf, origin):
     construction = row.construction
     glazing_const = '{}_glazing'.format(construction)
 
+    # Added features for plugin
+    overhang_depth = row.overhang_depth
+    #ventilation_rate = row.ventilation_rate
+
     if len(floors) == 1:
         floor_no = int(1)
         zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
@@ -755,7 +759,7 @@ def thermal_zones(row, df, idf, origin):
         external_walls(idf, zone_name, floor_no, ext_surf_coord,
                        zone_ceiling_h, zone_floor_h, zone_height,
                        min_avail_height, min_avail_width_for_window,
-                       wall_const, glazing_const, glazing_ratio)
+                       wall_const, glazing_const, glazing_ratio, overhang_depth)
 
         # Partition walls where adjacent polygons exist
         if adj_osgb_list:
@@ -788,7 +792,7 @@ def thermal_zones(row, df, idf, origin):
                                        zone_height, min_avail_height,
                                        min_avail_width_for_window,
                                        wall_const, glazing_const,
-                                       glazing_ratio)
+                                       glazing_ratio, overhang_depth)
                     else:
                         external_walls(idf, zone_name, floor_no,
                                        adj_wall_parti_surf_coord,
@@ -796,7 +800,7 @@ def thermal_zones(row, df, idf, origin):
                                        zone_height, min_avail_height,
                                        min_avail_width_for_window,
                                        wall_const, glazing_const,
-                                       glazing_ratio)
+                                       glazing_ratio, overhang_depth)
                         partition_walls(idf, zone_name, opposite_zone,
                                         adj_wall_parti_surf_coord,
                                         adj_height, zone_floor_h,
@@ -829,7 +833,7 @@ def thermal_zones(row, df, idf, origin):
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
                     min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+                    glazing_ratio, overhang_depth)
 
                 # Partition walls where adjacent polygons exist
                 if adj_osgb_list:
@@ -862,7 +866,7 @@ def thermal_zones(row, df, idf, origin):
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                             else:
                                 external_walls(idf, zone_name, floor_no,
                                                adj_wall_parti_surf_coord,
@@ -870,7 +874,7 @@ def thermal_zones(row, df, idf, origin):
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                                 partition_walls(idf, zone_name, opposite_zone,
                                                 adj_wall_parti_surf_coord,
                                                 adj_height, zone_floor_h,
@@ -899,7 +903,7 @@ def thermal_zones(row, df, idf, origin):
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
                     min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+                    glazing_ratio, overhang_depth)
 
                 # Partition walls where adjacent polygons exist
                 if adj_osgb_list:
@@ -932,7 +936,7 @@ def thermal_zones(row, df, idf, origin):
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                             else:
                                 external_walls(idf, zone_name, floor_no,
                                                adj_wall_parti_surf_coord,
@@ -940,7 +944,7 @@ def thermal_zones(row, df, idf, origin):
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                                 partition_walls(idf, zone_name, opposite_zone,
                                                 adj_wall_parti_surf_coord,
                                                 adj_height, zone_floor_h,
@@ -971,7 +975,7 @@ def thermal_zones(row, df, idf, origin):
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
                     min_avail_width_for_window, wall_const, glazing_const,
-                    glazing_ratio)
+                    glazing_ratio, overhang_depth)
 
                 # Partition walls where adjacent polygons exist
                 if adj_osgb_list:
@@ -1004,7 +1008,7 @@ def thermal_zones(row, df, idf, origin):
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                             else:
                                 external_walls(idf, zone_name, floor_no,
                                                adj_wall_parti_surf_coord,
@@ -1012,7 +1016,7 @@ def thermal_zones(row, df, idf, origin):
                                                zone_height, min_avail_height,
                                                min_avail_width_for_window,
                                                wall_const, glazing_const,
-                                               glazing_ratio)
+                                               glazing_ratio, overhang_depth)
                                 partition_walls(idf, zone_name, opposite_zone,
                                                 adj_wall_parti_surf_coord,
                                                 adj_height, zone_floor_h,
@@ -1162,7 +1166,7 @@ def roof_ceiling(idf, zone_name, space_above_floor,
 def external_walls(idf, zone_name, floor_number,
                    vertical_surface_coordinates, ceiling_height,
                    floor_height, zone_height, min_avail_height,
-                   min_window_width, wall_const, glazing_const, glazing_ratio):
+                   min_window_width, wall_const, glazing_const, glazing_ratio, overhang_depth):
     '''
     Function which generates external wall energyplus object and return exposed
     walls and glazings areas
@@ -1202,6 +1206,19 @@ def external_walls(idf, zone_name, floor_number,
             Starting_Z_Coordinate=starting_z_coordinate,
             Length=length,
             Height=height)
+        return
+    
+    def overhang(idf, window_name, depth):
+        if isinstance(depth, float) or isinstance(depth, int):
+            if depth > 0:
+                idf.newidfobject('SHADING:OVERHANG',
+                                Name=window_name+"_Overhang",
+                                Window_or_Door_Name=window_name,
+                                Height_above_Window_or_Door=0.0,
+                                Tilt_Angle_from_WindowDoor=90.0,
+                                Left_extension_from_WindowDoor_Width=0.0,
+                                Right_extension_from_WindowDoor_Width=0.0,
+                                Depth=depth)
         return
 
     # surface type
@@ -1264,6 +1281,9 @@ def external_walls(idf, zone_name, floor_number,
                 window(idf, win_surface_name, glazing_const,
                        building_surface_name, starting_x_coordinate,
                        starting_z_coordinate, win_length, win_height)
+
+                # Add overhang to each window of custom depth
+                overhang(idf, win_surface_name, overhang_depth)
     return
 
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

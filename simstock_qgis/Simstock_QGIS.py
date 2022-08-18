@@ -407,6 +407,7 @@ class SimstockQGIS:
             
             # Extract all other required Simstock data from layer
             headings = ["polygon", "osgb", "shading", "height", "wwr", "nofloors", "construction"]
+            headings.extend(["overhang_depth"])
             # TODO: test shading as bool
             dfdict = {}
             dfdict[headings[0]] = polygon
