@@ -407,6 +407,7 @@ class SimstockQGIS:
             
             # Extract all other required Simstock data from layer
             headings = ["polygon", "osgb", "shading", "height", "wwr", "nofloors", "construction"]
+            # TODO: test shading as bool
             dfdict = {}
             dfdict[headings[0]] = polygon
             for heading in headings[1:]:
@@ -670,8 +671,9 @@ class SimstockQGIS:
     def load_database(self, file_exists):
         def csv_to_gpkg(database_csvs, database_layer_names):
             """
-            Converts csvs to a single geopackage file that can be loaded and edited.
-            May be better to remove this from the plugin and start from the gpkg point.
+            Converts a provided list of csvs to a single geopackage file that can 
+            be loaded and edited. May be better to remove this from the plugin 
+            and start from the gpkg point.
             """
 
             # These are necessary arguments for writing gpkg layers
@@ -701,7 +703,7 @@ class SimstockQGIS:
             for layer in layer_names:
                 qgis.utils.iface.addVectorLayer(gpkg + "|layername=" + layer, layer, 'ogr')
 
-        # Find database csvs which contain the default constructions/materials
+        # Find database csvs which contain the default setup idf objects
         self.database_dir = os.path.join(self.plugin_dir, "Database")
         database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:len(self.database_tag)] == self.database_tag]
         database_layer_names = [file.name[:-4] for file in database_csvs] #TODO: remove and use .name method in place
@@ -769,8 +771,11 @@ class SimstockQGIS:
 
 
     def setup_basic_settings(self):
-        """Adds materials and constructions to the basic settings idf based on 
-        what is in the database files."""
+        """
+        Adds materials and constructions to the basic settings idf based on 
+        what is in the database files. This is run when the plugin simulation 
+        button is pressed.
+        """
 
         def create_obj_dicts(df, dfname=None):
             """
@@ -872,7 +877,8 @@ class SimstockQGIS:
         except IDDAlreadySetError:
             pass
 
-        # Initialise base idf which will become the basic_settings idf for Simstock
+        # Initialise base idf which will be added to and become the 
+        # basic_settings idf for Simstock
         idf = IDF(os.path.join(self.plugin_dir, 'base.idf'))
         
         # Find database layers in current project
@@ -891,7 +897,7 @@ class SimstockQGIS:
 
         # Add non-material objects to idf
         for key,df in dfs.items():
-            if not "MATERIAL" in key:
+            if not "MATERIAL" in key and not "HeatingCooling" in key:
                 df = dfs[key]
                 class_name = key.split("-")[-1].replace("_", ":") #change names to match energyplus fields
                 obj_dict = create_obj_dicts(df, key)
@@ -905,6 +911,24 @@ class SimstockQGIS:
         for key, df in dfs.items():
             if "MATERIAL" in key:
                 add_materials(key, df, used_materials)
+
+        # Check whether heating and cooling setpoints are to be included
+        HeatCool = dfs["DB-HeatingCooling-OnOff"].iloc[0,0]
+        #TODO: test with bool type, probably necessary for Mac
+        if not isinstance(HeatCool, str):
+            print("type ", type(HeatCool), HeatCool)
+            raise NotImplementedError("HeatCool is %s type" % type(HeatCool))
+
+        # Choose heating & cooling setpoint schedules according to check
+        if HeatCool.lower() == "false":
+            print("Heating and cooling are not activated.")
+            thermostat = idf.idfobjects["ThermostatSetpoint:DualSetpoint"][0]
+            # Swap the names
+            thermostat.Heating_Setpoint_Temperature_Schedule_Name = "Dwell_Heat_Off"
+            thermostat.Cooling_Setpoint_Temperature_Schedule_Name = "Dwell_Cool_Off"
+        elif HeatCool.lower() == "true":
+            # Schedules already have the correct names in this case
+            print("Heating and cooling are activated.")
 
         # Save idf
         idf.saveas(os.path.join(self.plugin_dir, 'basic_settings.idf'))
