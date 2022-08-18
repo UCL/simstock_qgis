@@ -631,8 +631,8 @@ class SimstockQGIS:
             extracted_results = extract_results(all_results, op_temp_threshold)
 
             # The base names of the results fields to be added (floor number will be appended to these)
-            attr_types = ["Hours above operative temperature",
-                            "Hours below operative temperature",
+            attr_types = ["Hours above {}C operative temperature".format(op_temp_threshold),
+                            "Hours below {}C operative temperature".format(op_temp_threshold),
                             "Electricity consumption"]
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
