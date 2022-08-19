@@ -91,21 +91,21 @@ def check_for_multipolygon(df):
     return df
     
 def bi_adj(df):
-    df['polygon'] = df['polygon'].apply(loads)
-    gdf = gpd.GeoDataFrame(df, geometry='polygon')
-    polygon_union = gdf.polygon.unary_union
+    df['sa_polygon'] = df['sa_polygon'].apply(loads)
+    gdf = gpd.GeoDataFrame(df, geometry='sa_polygon')
+    polygon_union = gdf.sa_polygon.unary_union
 
     if polygon_union.type == "MultiPolygon":
         for i, bi in enumerate(polygon_union):
             for index, row in gdf.iterrows():
-                if row['polygon'].within(bi):
+                if row['sa_polygon'].within(bi):
                     gdf.at[index, 'bi'] = 'bi_{}'.format(i+1)
 
         for index, row in gdf.iterrows():
-            touching = gdf[gdf.polygon.touches(row['polygon'])]
+            touching = gdf[gdf.sa_polygon.touches(row['sa_polygon'])]
             adj_checked = []
             for i, building in touching.iterrows():
-                    if row['polygon'].intersection(building['polygon']).type in ["LineString", "MultiLineString"]:
+                    if row['sa_polygon'].intersection(building['sa_polygon']).type in ["LineString", "MultiLineString"]:
                         adj_checked.append(building['osgb'])
             gdf.at[index, "adjacent"] = str(adj_checked)
             

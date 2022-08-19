@@ -83,11 +83,11 @@ def check_for_multipolygon(df):
     return df
 
 def bi_adj(df):
-    df['polygon'] = df['polygon'].apply(loads)
+    df['sa_polygon'] = df['sa_polygon'].apply(loads)
     #gdf = gpd.GeoDataFrame(df, geometry='polygon')
     #polygon_union = gdf.polygon.unary_union
     gdf = df.copy(deep=True) #recoded to avoid using geopandas
-    polygon_union = unary_union(gdf.polygon)
+    polygon_union = unary_union(gdf.sa_polygon)
 
     if polygon_union.type == "MultiPolygon":
         for i, bi in enumerate(polygon_union):
@@ -97,7 +97,7 @@ def bi_adj(df):
             bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
             bi_name = bi_name.replace(".", "-") #replace dots with dashes for filename compatibility
             for index, row in gdf.iterrows():
-                if row['polygon'].within(bi):
+                if row['sa_polygon'].within(bi):
                     gdf.at[index, 'bi'] = bi_name
 
         ### The following part just checks consistency against internal simstock
