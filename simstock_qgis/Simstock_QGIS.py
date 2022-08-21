@@ -546,7 +546,7 @@ class SimstockQGIS:
                 above = operative_series[operative_series > threshold_val].count()
                 below = operative_series[operative_series <= threshold_val].count()
 
-                output_name = "Electricity"
+                output_name = "Electricity" #TODO: convert to kWh and add units to results
                 elec_col = [col for col in df.columns if output_name in col]
                 elec_series = df[elec_col[0]] #should only be one col
                 elec = elec_series.sum()
@@ -619,8 +619,13 @@ class SimstockQGIS:
             new_layer_name = self.selectedLayer.name() + "_1"
 
         # Create new layer in memory for the results
-        mem_layer = QgsVectorLayer("Polygon?crs=epsg:4326", new_layer_name, "memory")
+        #TODO: Can CRS be sourced from project somehow?
+        crs = self.config["CRS"] #get CRS from config file
+        #crs = "epsg:4326"
+        mem_layer = QgsVectorLayer("Polygon?crs={}".format(crs), new_layer_name, "memory")
         mem_layer_data = mem_layer.dataProvider()
+
+        # Get attributes and fields from original layer
         layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
         layer_fields = self.selectedLayer.fields() # QgsFields type
 
@@ -923,6 +928,7 @@ class SimstockQGIS:
                 add_materials(key, df, used_materials)
 
         # Check whether heating and cooling setpoints are to be included
+        # TODO: check this beforehand to be able to tag on/off onto the results layer name
         HeatCool = dfs["DB-HeatingCooling-OnOff"].iloc[0,0]
         #TODO: test with bool type, probably necessary for Mac
         if not isinstance(HeatCool, str):
