@@ -130,6 +130,17 @@ class SimstockQGIS:
         # The prepended tag on database files used to identify them
         self.database_tag = "DB-"
 
+        # The headings that Simstock expects and the QVariant type of each
+        # Format is: "heading-QVariantType"
+        self.headings = ["polygon-None",
+                         "osgb-String",
+                         "shading-String",
+                         "height-Double",
+                         "wwr-Double",
+                         "nofloors-Int",
+                         "construction-String",
+                         "overhang_depth-Double"]
+
         # Load config file
         with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
             self.config = json.load(read_file)
@@ -411,8 +422,7 @@ class SimstockQGIS:
             polygon = [feature.geometry().asWkt() for feature in self.features]
             
             # Extract all other required Simstock data from layer
-            headings = ["polygon", "osgb", "shading", "height", "wwr", "nofloors", "construction"]
-            headings.extend(["overhang_depth"])
+            headings = [heading.split("-")[0] for heading in self.headings]
             # TODO: test shading as bool
             dfdict = {}
             dfdict[headings[0]] = polygon
@@ -564,17 +574,18 @@ class SimstockQGIS:
                 # Add the built island ref as a result
                 new_attrs.append(QgsField('bi_ref', QVariant.String))
 
-            # Must add the same number of fields to each feature
-            for i in range(max_floors):
+            if max_floors is not None:
+                # Must add the same number of fields to each feature
+                for i in range(max_floors):
 
-                # Loop over base result types
-                for attr_type in attr_types:
+                    # Loop over base result types
+                    for attr_type in attr_types:
 
-                    # Prepend floor number to result base name
-                    attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
+                        # Prepend floor number to result base name
+                        attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
 
-                    # Using "Double" type (float) for all fields
-                    new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
+                        # Using "Double" type (float) for all fields #TODO: this needs changing?
+                        new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
 
             # Get the names of each newly created attribute
             attr_names = [attr.name() for attr in new_attrs]
@@ -642,17 +653,34 @@ class SimstockQGIS:
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
-            attr_types = ["use"] #TODO: comment this out if not required
+            attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
-            nofloors = [feature["nofloors"] for feature in self.features]
-            max_floors = max(nofloors)
+            try:
+                # This will only work the 2nd time when the nofloors field is present
+                nofloors = [feature["nofloors"] for feature in self.features]
+                max_floors = max(nofloors)
+
+                # If the field exists but the values have not yet been filled out
+                # then skip creating the floor-specific fields for now
+                if isinstance(max_floors, QVariant): #TODO: comment this out if not required
+                    print("Field 'nofloors' detected but no values inputted.")
+                    max_floors = None
+
+            except (KeyError):
+                # In the first instance, the layer won't have the nofloors field
+                # So ignore the floor-specific fields for now
+                max_floors = None
         
         # Add new attribute types for the results for all floors
         new_attrs, attr_names = new_attrs_all_floors(max_floors, attr_types, results_mode)
 
         # Add overhang depth attribute (not needed for every floor)
         if not results_mode:
-            new_attrs.append(QgsField('overhang_depth', QVariant.Double))
+            #new_attrs.append(QgsField('overhang_depth', QVariant.Double))
+            for field in self.headings:
+                heading, QVtype = field.split("-")
+                if heading != "polygon":
+                    exec("new_attrs.append(QgsField('%s', QVariant.%s))" % (heading, QVtype), globals(), locals())
 
         for new_attr in new_attrs:
             layer_fields.append(new_attr)
