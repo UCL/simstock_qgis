@@ -107,12 +107,78 @@ ScheduleTypeLimits,
     Discrete;                !- Numeric Type
 
 
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:COMPACT ===========
+
+Schedule:Compact,
+    Dwell_Heat_Off,          !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until 24:00,             !- Field 3
+    0;                       !- Field 4
+
+Schedule:Compact,
+    Dwell_Cool_Off,          !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until 24:00,             !- Field 3
+    80;                      !- Field 4
+
+Schedule:Compact,
+    Activity Schedule 98779,    !- Name
+    Any Number,               !- Schedule Type Limits Name
+    Through: 12/31,           !- Field 1
+    For: AllDays,             !- Field 2
+    Until: 24:00,             !- Field 3
+    108;                      !- Field 4
+
+Schedule:Compact,
+    Clothing Schedule 98779,    !- Name
+    Any Number,               !- Schedule Type Limits Name
+    Through: 4/1,             !- Field 1
+    For: AllDays,             !- Field 2
+    Until: 24:00,             !- Field 3
+    1,                        !- Field 4
+    Through: 9/30,            !- Field 5
+    For: AllDays,             !- Field 6
+    Until: 24:00,             !- Field 7
+    .5,                       !- Field 8
+    Through: 12/31,           !- Field 9
+    For: AllDays,             !- Field 10
+    Until: 24:00,             !- Field 11
+    1;                        !- Field 12
+
+Schedule:Compact,
+    Work Efficiency,          !- Name
+    Fraction,                 !- Schedule Type Limits Name
+    Through: 12/31,           !- Field 1
+    For: AllDays,             !- Field 2
+    Until: 24:00,             !- Field 3
+    0;                        !- Field 4
+
+Schedule:Compact,
+    AirVelocitySchedule,      !- Name
+    Any Number,               !- Schedule Type Limits Name
+    Through: 12/31,           !- Field 1
+    For: AllDays,             !- Field 2
+    Until: 24:00,             !- Field 3
+    0.137;                    !- Field 4
+
+Schedule:Compact,
+    On 24/7,                  !- Name
+    Fraction,                 !- Schedule Type Limits Name
+    Through: 12/31,           !- Field 1
+    For: AllDays,             !- Field 2
+    Until: 24:00,             !- Field 3
+    1;                        !- Field 4
+
 !-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:CONSTANT ===========
 
 Schedule:Constant,Always 4,Control Type,4;
 
-
 !-   ===========  ALL OBJECTS IN CLASS: GLOBALGEOMETRYRULES ===========
+
 
 GlobalGeometryRules,
     UpperLeftCorner,         !- Starting Vertex Position
@@ -214,18 +280,11 @@ OutputControl:Table:Style,
 
 Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Annual;
 Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Annual;
-Output:Variable,
-    *,                       !- Key Value
-    Zone Operative Temperature,  !- Variable Name
-    Hourly;                  !- Reporting Frequency
+Output:Variable,*,Zone Operative Temperature,Hourly;
+Output:Variable,*,Zone Thermal Comfort Operative Temperature,Hourly;
 
-Output:Variable,
-    *,                       !- Key Value
-    Zone Thermal Comfort Operative Temperature,  !- Variable Name
-    Hourly;                  !- Reporting Frequency
-	
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:METER ===========
-	
+
 Output:Meter,Electricity:Zone:*,annual;
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
