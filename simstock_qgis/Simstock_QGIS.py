@@ -477,7 +477,7 @@ class SimstockQGIS:
             
             def run_readvarseso(idf_result_dirs):
                 for dir in idf_result_dirs:
-                    subprocess.run([self.readvarseso], cwd=dir)
+                    subprocess.run([self.readvarseso, "results-rvi.rvi", "unlimited"], cwd=dir)
             
             def generate_rvis(idf_result_dirs):
                 for dir in idf_result_dirs:
@@ -557,7 +557,7 @@ class SimstockQGIS:
                 below = operative_series[operative_series <= threshold_val].count()
 
                 output_name = "Electricity" #TODO: convert to kWh and add units to results
-                elec_col = [col for col in df.columns if output_name in col]
+                elec_col = [col for col in df.columns if output_name in col] #TODO: check if empty list
                 elec_series = df[elec_col[0]] #should only be one col
                 elec = elec_series.sum()
                 lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
@@ -653,6 +653,7 @@ class SimstockQGIS:
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
+            # TODO: comment out all the floor-specific field stuff if not required
             attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
             try:
@@ -661,12 +662,12 @@ class SimstockQGIS:
                 max_floors = max(nofloors)
 
                 # If the field exists but the values have not yet been filled out
-                # then skip creating the floor-specific fields for now
-                if isinstance(max_floors, QVariant): #TODO: comment this out if not required
+                # then skip creating the floor-specific fields
+                if isinstance(max_floors, QVariant):
                     print("Field 'nofloors' detected but no values inputted.")
                     max_floors = None
 
-            except (KeyError):
+            except KeyError:
                 # In the first instance, the layer won't have the nofloors field
                 # So ignore the floor-specific fields for now
                 max_floors = None
@@ -674,7 +675,7 @@ class SimstockQGIS:
         # Add new attribute types for the results for all floors
         new_attrs, attr_names = new_attrs_all_floors(max_floors, attr_types, results_mode)
 
-        # Add overhang depth attribute (not needed for every floor)
+        # Add fields which are not floor-specific
         if not results_mode:
             #new_attrs.append(QgsField('overhang_depth', QVariant.Double))
             for field in self.headings:
