@@ -552,12 +552,16 @@ class SimstockQGIS:
             for zone, df in all_results.items():
                 output_name = "Zone Operative Temperature"
                 operative_col = [col for col in df.columns if output_name in col]
+                if len(operative_col) == 0:
+                    raise RuntimeError("Cannot find Zone Operative Temperature for zone '%s' in results." % zone)
                 operative_series = df[operative_col[0]] #should only be one col
                 above = operative_series[operative_series > threshold_val].count()
                 below = operative_series[operative_series <= threshold_val].count()
 
                 output_name = "Electricity" #TODO: convert to kWh and add units to results
-                elec_col = [col for col in df.columns if output_name in col] #TODO: check if empty list
+                elec_col = [col for col in df.columns if output_name in col]
+                if len(elec_col) == 0:
+                    raise RuntimeError("Cannot find Electricity value for zone '%s' in results." % zone)
                 elec_series = df[elec_col[0]] #should only be one col
                 elec = elec_series.sum()
                 lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
