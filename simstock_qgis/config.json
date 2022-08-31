@@ -1,3 +1,4 @@
 {
-    "Operative temperature threshold": "18.0"
+    "Operative temperature threshold": "18.0",
+    "CRS": "epsg:32718"
 }
