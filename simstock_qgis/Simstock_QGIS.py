@@ -560,12 +560,12 @@ class SimstockQGIS:
                 above = operative_series[operative_series > threshold_val].count()
                 below = operative_series[operative_series <= threshold_val].count()
 
-                output_name = "Electricity" #TODO: convert to kWh and add units to results
+                output_name = "Electricity"
                 elec_col = [col for col in df.columns if output_name in col]
                 if len(elec_col) == 0:
                     raise RuntimeError("Cannot find Electricity value for zone '%s' in results." % zone)
                 elec_series = df[elec_col[0]] #should only be one col
-                elec = elec_series.sum()
+                elec = round(elec_series.sum() / (3.6E6), 2)
                 lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change from np float to float
                 extracted_results[zone] = lst
@@ -660,7 +660,7 @@ class SimstockQGIS:
             # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = ["Hours above {}C operative temperature".format(op_temp_threshold),
                             "Hours below {}C operative temperature".format(op_temp_threshold),
-                            "Electricity consumption"]
+                            "Electricity consumption (kWh)"]
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
