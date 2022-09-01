@@ -103,11 +103,12 @@ def main(idf_dir):
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
 
-            # Plugin feature: ventilation from attribute table
+            # Plugin feature: ventilation rate sourced from attribute table
             # Get specified ventilation rate for current zone
-            ventilation_rate = zones_df[zones_df["osgb"]=="_".join(zone.split("_")[:-2])]["ventilation_rate"].to_numpy()[0]
+            osgb_from_zone = "_".join(zone.split("_")[:-2])
+            ventilation_rate = zones_df[zones_df["osgb"]==osgb_from_zone]["ventilation_rate"].to_numpy()[0]
 
-            # Get the rest of the default values from dict
+            # Get the rest of the default ventilation obj values from dict
             zone_ventilation_dict = ventilation_dict
 
             # Set the name, zone name and ventilation rate
@@ -115,7 +116,7 @@ def main(idf_dir):
             zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
             zone_ventilation_dict["Flow_Rate_per_Person"] = ventilation_rate
 
-            # Add the idf object
+            # Add the ventilation idf object
             idf.newidfobject(**zone_ventilation_dict)
         
         #if mode == "single":
@@ -1345,6 +1346,7 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
 
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+# This is used as default values to build the per zone ventilation objects
 ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
                     'Name': 'Dwell Nat Vent',
                     'Zone_or_ZoneList_Name': '',
