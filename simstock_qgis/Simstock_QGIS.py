@@ -139,6 +139,7 @@ class SimstockQGIS:
                          "wwr-Double",
                          "nofloors-Int",
                          "construction-String",
+                         "ventilation_rate-Double",
                          "overhang_depth-Double"]
 
         # Load config file
@@ -622,10 +623,10 @@ class SimstockQGIS:
                     if len(thermal_zones) != 0: #ignore shading blocks
 
                         # Loop through the thermal zones belonging to the feature
-                        for i, zone in enumerate(thermal_zones):
+                        for j, zone in enumerate(thermal_zones):
 
                             # Check the order is correct
-                            if zone[-1] != str(i+1):
+                            if zone[-1] != str(j+1):
                                 print("Floor results are in the wrong order.")
 
                             # Collect the results for the thermal zone

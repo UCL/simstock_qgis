@@ -76,6 +76,7 @@ def main(idf_dir):
             exec('objects.Zone_%s_Name = zone' % (i + 1))
 
         # Ideal loads system
+        #ventilation_rates = zones_df[["osgb", "ventilation_rate"]]
         for zone in zone_names:
             system_name = '{}_HVAC'.format(zone)
             eq_name = '{}_Eq'.format(zone)
@@ -101,6 +102,21 @@ def main(idf_dir):
                                 Zone_Air_Inlet_Node_or_NodeList_Name=supp_air_node,
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
+
+            # Plugin feature: ventilation from attribute table
+            # Get specified ventilation rate for current zone
+            ventilation_rate = zones_df[zones_df["osgb"]=="_".join(zone.split("_")[:-2])]["ventilation_rate"].to_numpy()[0]
+
+            # Get the rest of the default values from dict
+            zone_ventilation_dict = ventilation_dict
+
+            # Set the name, zone name and ventilation rate
+            zone_ventilation_dict["Name"] = zone + "_ventilation"
+            zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
+            zone_ventilation_dict["Flow_Rate_per_Person"] = ventilation_rate
+
+            # Add the idf object
+            idf.newidfobject(**zone_ventilation_dict)
         
         #if mode == "single":
         #    idf.saveas(os.path.join(IDF_DIR, '{}.idf'.format(datafilename)))
@@ -734,7 +750,6 @@ def thermal_zones(row, df, idf, origin):
 
     # Added features for plugin
     overhang_depth = row.overhang_depth
-    #ventilation_rate = row.ventilation_rate
 
     if len(floors) == 1:
         floor_no = int(1)
@@ -1330,6 +1345,33 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
 
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
+                    'Name': 'Dwell Nat Vent',
+                    'Zone_or_ZoneList_Name': '',
+                    'Schedule_Name': 'Dwell_Occ',
+                    'Design_Flow_Rate_Calculation_Method': 'Flow/Person',
+                    'Design_Flow_Rate': '',
+                    'Flow_Rate_per_Zone_Floor_Area': '',
+                    'Flow_Rate_per_Person': 0.008,
+                    'Air_Changes_per_Hour': '',
+                    'Ventilation_Type': 'NATURAL',
+                    'Fan_Pressure_Rise': 0.0,
+                    'Fan_Total_Efficiency': 1.0,
+                    'Constant_Term_Coefficient': 1.0,
+                    'Temperature_Term_Coefficient': 0.0,
+                    'Velocity_Term_Coefficient': 0.0,
+                    'Velocity_Squared_Term_Coefficient': 0.0,
+                    'Minimum_Indoor_Temperature': 40.0,
+                    'Minimum_Indoor_Temperature_Schedule_Name': '',
+                    'Maximum_Indoor_Temperature': 100.0,
+                    'Maximum_Indoor_Temperature_Schedule_Name': '',
+                    'Delta_Temperature': 0.0,
+                    'Delta_Temperature_Schedule_Name': '',
+                    'Minimum_Outdoor_Temperature': -100.0,
+                    'Minimum_Outdoor_Temperature_Schedule_Name': '',
+                    'Maximum_Outdoor_Temperature': 100.0,
+                    'Maximum_Outdoor_Temperature_Schedule_Name': '',
+                    'Maximum_Wind_Speed': 40.0}
 
 if __name__ == '__main__':
     main()

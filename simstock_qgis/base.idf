@@ -203,37 +203,6 @@ ZoneInfiltration:DesignFlowRate,
     0;                       !- Velocity Squared Term Coefficient
 
 
-!-   ===========  ALL OBJECTS IN CLASS: ZONEVENTILATION:DESIGNFLOWRATE ===========
-
-ZoneVentilation:DesignFlowRate,
-    Dwell Nat Vent,          !- Name
-    Dwell,                   !- Zone or ZoneList Name
-    Dwell_Occ,               !- Schedule Name
-    Flow/Person,             !- Design Flow Rate Calculation Method
-    ,                        !- Design Flow Rate {m3/s}
-    ,                        !- Flow Rate per Zone Floor Area {m3/s-m2}
-    0.008,                   !- Flow Rate per Person {m3/s-person}
-    ,                        !- Air Changes per Hour {1/hr}
-    NATURAL,                 !- Ventilation Type
-    0,                       !- Fan Pressure Rise {Pa}
-    1,                       !- Fan Total Efficiency
-    1,                       !- Constant Term Coefficient
-    0,                       !- Temperature Term Coefficient
-    0,                       !- Velocity Term Coefficient
-    0,                       !- Velocity Squared Term Coefficient
-    40,                      !- Minimum Indoor Temperature {C}
-    ,                        !- Minimum Indoor Temperature Schedule Name
-    100,                     !- Maximum Indoor Temperature {C}
-    ,                        !- Maximum Indoor Temperature Schedule Name
-    0,                       !- Delta Temperature {deltaC}
-    ,                        !- Delta Temperature Schedule Name
-    -100,                    !- Minimum Outdoor Temperature {C}
-    ,                        !- Minimum Outdoor Temperature Schedule Name
-    100,                     !- Maximum Outdoor Temperature {C}
-    ,                        !- Maximum Outdoor Temperature Schedule Name
-    40;                      !- Maximum Wind Speed {m/s}
-
-
 !-   ===========  ALL OBJECTS IN CLASS: ZONECONTROL:THERMOSTAT ===========
 
 ! - Zone name
