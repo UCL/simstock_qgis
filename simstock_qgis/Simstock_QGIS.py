@@ -133,7 +133,7 @@ class SimstockQGIS:
         # The headings that Simstock expects and the QVariant type of each
         # Format is: "heading-QVariantType"
         self.headings = ["polygon-None",
-                         "osgb-String",
+                         "UID-String",
                          "shading-String",
                          "height-Double",
                          "wwr-Double",
@@ -432,6 +432,7 @@ class SimstockQGIS:
                 except KeyError:
                     raise Exception("Attribute '%s' was not found in the attribute table. Check that it is present and spelled correctly and try again." % heading)
             data = pd.DataFrame(dfdict)
+            data = data.rename(columns={"UID":"osgb"})
             
             # Save data as csv for Simstock to read
             data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
@@ -607,7 +608,7 @@ class SimstockQGIS:
                 
                 if results_mode:
                     # Get the unique id for polygon
-                    osgb = self.features[i].attribute("osgb")
+                    osgb = self.features[i].attribute("UID")
 
                     # Find the BI ref
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
@@ -621,7 +622,7 @@ class SimstockQGIS:
                     feature_attrs.extend(result_vals)
                 
                 # Add the UID but only if it doesn't already exist
-                elif not results_mode and "UID" not in feature_attrs:#[field.name() for field in self.features[i].fields()]:
+                elif not results_mode and "UID" not in feature_attrs:
                     feature_attrs.append(self.unique_ids[i])
 
                 # Set the feature's attributes
@@ -648,6 +649,7 @@ class SimstockQGIS:
         # Get attributes and fields from original layer
         layer_attrs = self.selectedLayer.dataProvider().fields().toList() # QgsField type
         layer_fields = self.selectedLayer.fields() # QgsFields type
+        new_attrs = []
 
         if results_mode:
             # Extract the results from the csvs by thermal zone
@@ -671,7 +673,7 @@ class SimstockQGIS:
             self.unique_ids = ["UID{}".format(str(i).zfill(padding)) for i in range(len(self.features))]
             
             # Add fields which are not floor-specific
-            new_attrs = [(QgsField("UID", QVariant.String))]
+            #new_attrs = [(QgsField("UID", QVariant.String))]
             for field in self.headings:
                 heading, QVtype = field.split("-")
                 if heading != "polygon":
