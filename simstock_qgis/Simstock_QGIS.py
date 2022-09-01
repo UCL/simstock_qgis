@@ -599,7 +599,9 @@ class SimstockQGIS:
 
         def add_results_to_features(fields, results_mode, extracted_results=None):
             """Adds the new attributes to the features and populates their values."""
+            # Loop through each feature
             for i in range(len(self.features)):
+
                 # Update the feature to gain the new fields object
                 self.features[i].setFields(fields, initAttributes=False)
                 
@@ -607,18 +609,29 @@ class SimstockQGIS:
                 feature_attrs = self.features[i].attributes()
                 
                 if results_mode:
-                    # Get the unique id for polygon
+                    # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
 
                     # Find the BI ref
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
 
-                    # Append the new results
+                    # Collate the new results
                     result_vals = [bi_ref]
-                    thermal_zones = [zone for zone in extracted_results.keys() if osgb in zone]#.sort() #TODO: get sort to work (try sorted(dict))
+                    # Get all the thermal zones belonging to this feature (multifloors)
+                    thermal_zones = [zone for zone in extracted_results.keys() if osgb in zone]
                     if len(thermal_zones) != 0: #ignore shading blocks
-                        for zone in thermal_zones:
-                            result_vals.extend(extracted_results[zone]) #TODO: verify if order is correct
+
+                        # Loop through the thermal zones belonging to the feature
+                        for i, zone in enumerate(thermal_zones):
+
+                            # Check the order is correct
+                            if zone[-1] != str(i+1):
+                                print("Floor results are in the wrong order.")
+
+                            # Collect the results for the thermal zone
+                            result_vals.extend(extracted_results[zone])
+                    
+                    # Put the results with the rest of the attributes ready for adding
                     feature_attrs.extend(result_vals)
                 
                 # Add the UID but only if it doesn't already exist
