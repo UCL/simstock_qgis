@@ -502,6 +502,7 @@ class SimstockQGIS:
             - Retrieving the results of interest by thermal zone
             - Pushing the results back to the new layer
             - Pushing the new layer to the QGIS console
+        This is also now called by the "Add Fields" button with results_mode=False
         TODO: move result fetching fns elsewhere.
         """
         # Set up Eppy
@@ -588,12 +589,12 @@ class SimstockQGIS:
                         # Prepend floor number to result base name
                         attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
 
-                        # Using "Double" type (float) for all fields #TODO: this needs changing?
+                        # Using "Double" type (float) for all fields #TODO: this needs changing esp for "use"
                         new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
 
             # Get the names of each newly created attribute
-            attr_names = [attr.name() for attr in new_attrs]
-            return new_attrs, attr_names
+            #attr_names = [attr.name() for attr in new_attrs]
+            return new_attrs#, attr_names
 
         def add_results_to_features(fields, results_mode, extracted_results=None):
             """Adds the new attributes to the features and populates their values."""
@@ -618,6 +619,10 @@ class SimstockQGIS:
                         for zone in thermal_zones:
                             result_vals.extend(extracted_results[zone]) #TODO: verify if order is correct
                     feature_attrs.extend(result_vals)
+                
+                # Add the UID but only if it doesn't already exist
+                elif not results_mode and "UID" not in feature_attrs:#[field.name() for field in self.features[i].fields()]:
+                    feature_attrs.append(self.unique_ids[i])
 
                 # Set the feature's attributes
                 self.features[i].setAttributes(feature_attrs)
@@ -660,6 +665,18 @@ class SimstockQGIS:
             # TODO: comment out all the floor-specific field stuff if not required
             attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
+
+            # Create unique IDs for each feature and ensure they are the same length
+            padding = len(str(len(self.features)))
+            self.unique_ids = ["UID{}".format(str(i).zfill(padding)) for i in range(len(self.features))]
+            
+            # Add fields which are not floor-specific
+            new_attrs = [(QgsField("UID", QVariant.String))]
+            for field in self.headings:
+                heading, QVtype = field.split("-")
+                if heading != "polygon":
+                    exec("new_attrs.append(QgsField('%s', QVariant.%s))" % (heading, QVtype), globals(), locals())
+
             try:
                 # This will only work the 2nd time when the nofloors field is present
                 nofloors = [feature["nofloors"] for feature in self.features]
@@ -677,15 +694,7 @@ class SimstockQGIS:
                 max_floors = None
         
         # Add new attribute types for the results for all floors
-        new_attrs, attr_names = new_attrs_all_floors(max_floors, attr_types, results_mode)
-
-        # Add fields which are not floor-specific
-        if not results_mode:
-            #new_attrs.append(QgsField('overhang_depth', QVariant.Double))
-            for field in self.headings:
-                heading, QVtype = field.split("-")
-                if heading != "polygon":
-                    exec("new_attrs.append(QgsField('%s', QVariant.%s))" % (heading, QVtype), globals(), locals())
+        new_attrs.extend(new_attrs_all_floors(max_floors, attr_types, results_mode))
 
         for new_attr in new_attrs:
             layer_fields.append(new_attr)
