@@ -103,8 +103,6 @@ class SimstockQGIS:
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-        #TODO: replace default weather file with auto-select script or default file
-        self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
 
         # Find the computer's operating system and find energyplus version
         self.system = platform.system().lower()
@@ -204,7 +202,8 @@ class SimstockQGIS:
             shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
             if os.path.exists(shoebox_output):
                 shutil.rmtree(shoebox_output)
-            run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', self.epw_file, shoebox_idf])
+            epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+            run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, shoebox_idf])
             if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
                 self.initial_tests.append("EnergyPlus could not run.")
             
@@ -454,7 +453,9 @@ class SimstockQGIS:
             ### SIMULATION
             def run_simulation(multiprocessing = True): #TODO: maybe remove old results before simulating
                 #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
-                time.sleep(5) #sleep so that messages can be pushed to QGIS before it freezes during sim
+
+                #TODO: replace default weather file with auto-select script or default file
+                self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
                 
                 if not multiprocessing: # Single core
                     print("Running EnergyPlus simulation on a single core...")

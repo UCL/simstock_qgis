@@ -5,6 +5,7 @@ import os
 import platform
 import subprocess
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument("idf_dir", help="The path to the idf files")
@@ -15,9 +16,12 @@ class EP_Run():
         self.plugin_dir = os.path.dirname(__file__)
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
         self.idf_dir = idf_dir
-        self.epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
         files = os.scandir(self.idf_dir)
         self.idf_files = [file.name for file in files if file.name[-4:] == ".idf"]
+        # Load config file
+        with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
+            self.config = json.load(read_file)
+        self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
         
         # Find the computer's operating system and find energyplus version
         system = platform.system().lower()
