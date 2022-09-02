@@ -151,7 +151,7 @@
     </font>
    </property>
    <property name="text">
-    <string>First, choose the working directory and then select the tick button.</string>
+    <string>First, choose the current working directory (cwd) and then select the tick button:</string>
    </property>
    <property name="wordWrap">
     <bool>true</bool>
