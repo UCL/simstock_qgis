@@ -62,6 +62,7 @@ class SimstockQGIS:
         """
         # Save reference to the QGIS interface
         self.iface = iface
+        self.iface.actionShowPythonDialog().trigger() #show console upon launch
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
         
