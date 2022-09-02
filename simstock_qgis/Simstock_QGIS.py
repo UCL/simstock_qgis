@@ -465,7 +465,7 @@ class SimstockQGIS:
                 
                 else: # Parallel processing
                     print("Running EnergyPlus simulation on multiple cores...")
-                    multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py") #TODO: change epw file in mp script
+                    multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
                     out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     if out.returncode != 0:
                         raise RuntimeError(out.stderr)
@@ -650,7 +650,10 @@ class SimstockQGIS:
 
         # Set name for new layer to be created
         if results_mode:
-            new_layer_name = self.selectedLayer.name() + "_Simstock_results"
+            if self.HeatCool.lower() == "false":
+                new_layer_name = self.selectedLayer.name() + "_Simstock-results_HC-Off"
+            elif self.HeatCool.lower() == "true":
+                new_layer_name = self.selectedLayer.name() + "_Simstock-results_HC-On"
         else:
             self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
             new_layer_name = self.selectedLayer.name() + "_1"
@@ -988,21 +991,20 @@ class SimstockQGIS:
                 add_materials(key, df, used_materials)
 
         # Check whether heating and cooling setpoints are to be included
-        # TODO: check this beforehand to be able to tag on/off onto the results layer name
-        HeatCool = dfs["DB-HeatingCooling-OnOff"].iloc[0,0]
+        self.HeatCool = dfs["DB-HeatingCooling-OnOff"].iloc[0,0]
         #TODO: test with bool type, probably necessary for Mac
-        if not isinstance(HeatCool, str):
-            print("type ", type(HeatCool), HeatCool)
-            raise NotImplementedError("HeatCool is %s type" % type(HeatCool))
+        if not isinstance(self.HeatCool, str):
+            print("type ", type(self.HeatCool), self.HeatCool)
+            raise NotImplementedError("self.HeatCool is %s type" % type(self.HeatCool))
 
         # Choose heating & cooling setpoint schedules according to check
-        if HeatCool.lower() == "false":
+        if self.HeatCool.lower() == "false":
             print("Heating and cooling are not activated.")
             thermostat = idf.idfobjects["ThermostatSetpoint:DualSetpoint"][0]
             # Swap the names
             thermostat.Heating_Setpoint_Temperature_Schedule_Name = "Dwell_Heat_Off"
             thermostat.Cooling_Setpoint_Temperature_Schedule_Name = "Dwell_Cool_Off"
-        elif HeatCool.lower() == "true":
+        elif self.HeatCool.lower() == "true":
             # Schedules already have the correct names in this case
             print("Heating and cooling are activated.")
 
