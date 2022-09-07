@@ -572,7 +572,7 @@ class SimstockQGIS:
                     return value
                 
                 elec = get_result_val("Electricity", df)
-                elec = round(elec_series.sum() / (3.6E6), 2)
+                elec = round(elec / (3.6E6), 2)
                 lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change from np float to float
                 extracted_results[zone] = lst
