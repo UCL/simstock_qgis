@@ -563,11 +563,15 @@ class SimstockQGIS:
                 above = operative_series[operative_series > threshold_val].count()
                 below = operative_series[operative_series <= threshold_val].count()
 
-                output_name = "Electricity"
-                elec_col = [col for col in df.columns if output_name in col]
-                if len(elec_col) == 0:
-                    raise RuntimeError("Cannot find Electricity value for zone '%s' in results." % zone)
-                elec_series = df[elec_col[0]] #should only be one col
+                def get_result_val(output_name, df):
+                    value_col = [col for col in df.columns if output_name in col]
+                    if len(value_col) == 0:
+                        raise RuntimeError("Cannot find %s value for zone '%s' in results." % (output_name, zone))
+                    series = df[value_col[0]] #should only be one col
+                    value = series.sum()
+                    return value
+                
+                elec = get_result_val("Electricity", df)
                 elec = round(elec_series.sum() / (3.6E6), 2)
                 lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change from np float to float
@@ -942,8 +946,14 @@ class SimstockQGIS:
         
         def bool_quick_fix(dfs):
             """To delete"""
-            dfs["DB-Fabric-WINDOWMATERIAL_GLAZING"]["Solar_Diffusing"] = "No"
-            dfs["DB-Loads-PEOPLE"]["Enable_ASHRAE_55_Comfort_Warnings"] = "No"
+            try:
+                dfs["DB-Fabric-WINDOWMATERIAL_GLAZING"]["Solar_Diffusing"] = "No"
+            except KeyError:
+                pass
+            try:
+                dfs["DB-Loads-PEOPLE"]["Enable_ASHRAE_55_Comfort_Warnings"] = "No"
+            except KeyError:
+                pass
 
 
         # Set up Eppy
