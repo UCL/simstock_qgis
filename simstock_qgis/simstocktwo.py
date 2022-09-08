@@ -747,10 +747,78 @@ def thermal_zones(row, df, idf, origin):
     floors = range(int(row.nofloors))
 
     construction = row.construction
-    glazing_const = '{}_glazing'.format(construction)
+    #glazing_const = '{}_glazing'.format(construction)
 
-    # Added features for plugin
+    ### Added features for Simstock QGIS plugin
     overhang_depth = row.overhang_depth
+
+    # Select constructions
+    glazing_const = "glazing"
+    
+    def set_construction(construction, element):
+        """
+        if construction.lower() == "quincha":
+            if element == "ground_floor":
+                return "ground_floor_quincha"
+            if element == "wall":
+                return "quincha_wall"
+            if element == "roof":
+                return "mud_roof"
+            if element == "ceiling":
+                raise RuntimeError("Quincha constructions can only have one floor. Check polygon '%s'" % row.osgb)
+        if construction.lower() == "adobe":
+            if element == "ground_floor":
+                return "ground_floor_adobe"
+            if element == "wall":
+                return "adobe_wall"
+            if element == "roof":
+                return "mud_roof"
+            if element == "ceiling":
+                return "wood_ceiling"
+        if construction.lower() == "timber":
+            if element == "ground_floor":
+                return "ground_floor_timber"
+            if element == "wall":
+                return "timber_wall"
+            if element == "roof":
+                return "metal_roof_for_timber_wall"
+            if element == "ceiling":
+                raise RuntimeError("Timber constructions can only have one floor. Check polygon '%s'" % row.osgb)
+        if construction.lower() == "brick1":
+            if element == "ground_floor":
+                return "ground_floor_brick"
+            if element == "wall":
+                return "brick_wall"
+            if element == "roof":
+                return "metal_roof_for_brick_wall"
+            if element == "ceiling":
+                return "concrete_ceiling"
+        if construction.lower() == "brick2":
+            if element == "ground_floor":
+                return "ground_floor_brick"
+            if element == "wall":
+                return "brick_wall"
+            if element == "roof":
+                return "reinforced_concrete_roof"
+            if element == "ceiling":
+                return "concrete_ceiling"
+        """
+        # If none of the presets are used, resort to custom construction:
+        if element == "ground_floor":
+            return "{}_ground_floor".format(construction)
+        if element == "wall":
+            return "{}_wall".format(construction)
+        if element == "roof":
+            return "{}_roof".format(construction)
+        if element == "ceiling":
+            if construction.lower() == "construction1":
+                raise RuntimeError("Quincha constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
+            if construction.lower() == "construction3":
+                raise RuntimeError("Timber constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
+            return "{}_ceiling".format(construction)
+        if element == "ceiling_inverse":
+            return "{}_ceiling_inverse".format(construction)
+
 
     if len(floors) == 1:
         floor_no = int(1)
@@ -762,16 +830,16 @@ def thermal_zones(row, df, idf, origin):
 
         idf.newidfobject('ZONE', Name=zone_name)
 
-        floor_const = '{}_solid_ground_floor'.format(construction)
+        floor_const = set_construction(construction, "ground_floor")
         floor(idf, zone_name, space_below_floor, horiz_surf_coord,
               zone_floor_h, floor_const)
 
-        roof_const = '{}_flat_roof'.format(construction)
+        roof_const = set_construction(construction, "roof")
         roof_ceiling(idf, zone_name, space_above_floor,
                      horiz_surf_coord, zone_ceiling_h, roof_const)
 
         zone_height = zone_ceiling_h - zone_floor_h
-        wall_const = '{}_wall'.format(construction)
+        wall_const = set_construction(construction, "wall")
         external_walls(idf, zone_name, floor_no, ext_surf_coord,
                        zone_ceiling_h, zone_floor_h, zone_height,
                        min_avail_height, min_avail_width_for_window,
@@ -836,15 +904,15 @@ def thermal_zones(row, df, idf, origin):
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = '{}_solid_ground_floor'.format(construction)
+                floor_const = set_construction(construction, "ground_floor")
                 floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = 'ceiling'
+                roof_const = set_construction(construction, "ceiling")
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h, roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
+                wall_const = set_construction(construction, "wall")
                 external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
@@ -906,15 +974,15 @@ def thermal_zones(row, df, idf, origin):
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = 'ceiling_inverse'
+                floor_const = set_construction(construction, "ceiling_inverse")
                 floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = '{}_flat_roof'.format(construction)
+                roof_const = set_construction(construction, "roof")
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h, roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
+                wall_const = set_construction(construction, "wall")
                 external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
@@ -977,16 +1045,16 @@ def thermal_zones(row, df, idf, origin):
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = 'ceiling_inverse'
+                floor_const = set_construction(construction, "ceiling_inverse")
                 floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = 'ceiling'
+                roof_const = set_construction(construction, "ceiling")
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h,
                              roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = '{}_wall'.format(construction)
+                wall_const = set_construction(construction, "wall")
                 external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
