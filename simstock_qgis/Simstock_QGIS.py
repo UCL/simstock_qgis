@@ -570,7 +570,7 @@ class SimstockQGIS:
             extracted_results = {}
             cooling_COP = float(self.config["Cooling COP"])
             grid_factor = float(self.config["Grid factor - kgCO2/kWh"])
-            elec_cost   = float(self.config["Electricity cost - dollar/kWh"])
+            elec_cost   = float(self.config["Electricity cost - currency/kWh"])
 
             # Loop over each zone's results df
             for zone, df in all_results.items():
@@ -587,11 +587,18 @@ class SimstockQGIS:
                 cooling_load = get_result_val("Cooling", df).sum()
                 cooling_demand = cooling_load / cooling_COP #apply COP factor
 
+                # Combine to get total electricity demand
                 energy = elec + heating_load + cooling_demand
                 energy = round(energy / (3.6E6), 2) #convert to kWh
 
+                # Apply grid factor to get associated CO2 emissions in kg
+                co2_emissions = round(energy * grid_factor, 2)
+
+                # Apply cost of electricity to get total cost
+                total_cost = round(energy * elec_cost, 2)
+
                 # Combine extracted results into list
-                lst = [above, below, energy] #TODO: this needs to be same order as attr_types, change to dict?
+                lst = [above, below, energy, co2_emissions, total_cost] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change type from np float to float
                 extracted_results[zone] = lst
 
@@ -697,12 +704,15 @@ class SimstockQGIS:
             # Extract the results from the csvs by thermal zone
             all_results = make_allresults_dict()
             op_temp_threshold = float(self.config["Operative temperature threshold"])
+            currency = self.config["Currency"]
             extracted_results = extract_results(all_results, op_temp_threshold)
 
             # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = ["Hours above {}C operative temperature".format(op_temp_threshold),
                             "Hours below {}C operative temperature".format(op_temp_threshold),
-                            "Electricity consumption (kWh)"]
+                            "Electricity consumption (kWh/yr)",
+                            "CO2 emissions (kg/yr)",
+                            "Electricity cost ({}/yr)".format(currency)]
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
