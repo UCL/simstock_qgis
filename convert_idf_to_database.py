@@ -5,30 +5,31 @@ import numpy as np
 
 def main():
     ### SET ENERGYPLUS IDD FILE:
-    IDF.setiddname(r"EnergyPlus\ep8.9_windows\Energy+.idd")
+    IDF.setiddname(r"C:\EnergyPlusV8-9-0\Energy+.idd")
 
     ### SET THE IDF FILE TO BE CONVERTED:
-    idf = IDF("basic_settings.idf")
+    idf = IDF("amd_basic_settings.idf")
 
     ### THE OBJECTS TO BE RETRIEVED FROM THE IDF FILE:
     # More can be added here if required - the dictonary key name needs to
     # match the idf object name exactly, except replacing ":" with "_"
     # and also it is not case-sensitive
-    """object_dict = {"material" : idf.idfobjects['MATERIAL'],
+    object_dict = {"material" : idf.idfobjects['MATERIAL'],
                "material_nomass" : idf.idfobjects['MATERIAL:NOMASS'],
                "material_infraredtransparent" : idf.idfobjects['MATERIAL:INFRAREDTRANSPARENT'],
                "material_airgap" : idf.idfobjects['MATERIAL:AIRGAP'],
                "windowmaterial_glazing" : idf.idfobjects['WINDOWMATERIAL:GLAZING'],
                "windowmaterial_gas" : idf.idfobjects['WINDOWMATERIAL:GAS'],
-               "construction" : idf.idfobjects['CONSTRUCTION']}"""
-    object_dict = {"people" : idf.idfobjects['PEOPLE'],
+               "construction" : idf.idfobjects['CONSTRUCTION'],
+               "people" : idf.idfobjects['PEOPLE'],
                    "electricequipment" : idf.idfobjects['ELECTRICEQUIPMENT'],
                    "lights" : idf.idfobjects['LIGHTS'],
                    "schedule_compact" : idf.idfobjects['SCHEDULE:COMPACT'],
                    "ZONEINFILTRATION_DESIGNFLOWRATE" : idf.idfobjects['ZONEINFILTRATION:DESIGNFLOWRATE'],
-                   "ZONEVENTILATION_DESIGNFLOWRATE" : idf.idfobjects['ZONEVENTILATION:DESIGNFLOWRATE'],
-                   "ZONECONTROL_THERMOSTAT" : idf.idfobjects['ZONECONTROL:THERMOSTAT'],
-                   "THERMOSTATSETPOINT_DUALSETPOINT" : idf.idfobjects['THERMOSTATSETPOINT:DUALSETPOINT']}
+                   "ZONEVENTILATION_DESIGNFLOWRATE" : idf.idfobjects['ZONEVENTILATION:DESIGNFLOWRATE']}
+#                   "ZONECONTROL_THERMOSTAT" : idf.idfobjects['ZONECONTROL:THERMOSTAT'],
+#                   "THERMOSTATSETPOINT_DUALSETPOINT" : idf.idfobjects['THERMOSTATSETPOINT:DUALSETPOINT']}
+    object_dict = {"WindowMaterial_SimpleGlazingSystem" : idf.idfobjects['WindowMaterial:SimpleGlazingSystem']}
     
     ### CONVERT TO CSV FILES:
     # Note that if the csv files already exist, they will be appended to
@@ -65,7 +66,7 @@ def convert_object_dicts(object_dict: dict):
     """Converts list of idf objects into a dictionary, matching the field names 
     with their values."""
     for object_type, objects in object_dict.items():
-        if "material" in object_type:
+        if "material" in object_type.lower():
             is_material = True
         else:
             is_material = False
