@@ -398,7 +398,7 @@ class SimstockQGIS:
         self.setup_basic_settings()
         
         if self.simulation_started:
-            print("Please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
+            print("\nTo re-run the plugin, please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
             
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
@@ -548,6 +548,7 @@ class SimstockQGIS:
                     zonename = zone.upper() #E+ outputs zone names in caps in results
                     zonecols = [col for col in df.columns if zonename in col]
                     all_results[zone] = df[zonecols]
+
             return all_results
 
         def extract_results(all_results, threshold_val):
@@ -567,6 +568,9 @@ class SimstockQGIS:
             
             # Set up dict
             extracted_results = {}
+            cooling_COP = float(self.config["Cooling COP"])
+            grid_factor = float(self.config["Grid factor - kgCO2/kWh"])
+            elec_cost   = float(self.config["Electricity cost - dollar/kWh"])
 
             # Loop over each zone's results df
             for zone, df in all_results.items():
@@ -576,14 +580,21 @@ class SimstockQGIS:
                 below = operative_series[operative_series <= threshold_val].count()
                 
                 # Get electricity consumption
-                elec_series = get_result_val("Electricity", df)
-                elec = elec_series.sum()
-                elec = round(elec / (3.6E6), 2)
+                elec = get_result_val("Electricity", df).sum()
+
+                # Get hypothetical heating/cooling loads
+                heating_load = get_result_val("Heating", df).sum()
+                cooling_load = get_result_val("Cooling", df).sum()
+                cooling_demand = cooling_load / cooling_COP #apply COP factor
+
+                energy = elec + heating_load + cooling_demand
+                energy = round(energy / (3.6E6), 2) #convert to kWh
 
                 # Combine extracted results into list
-                lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
+                lst = [above, below, energy] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change type from np float to float
                 extracted_results[zone] = lst
+
             return extracted_results
 
         def new_attrs_all_floors(max_floors, attr_types, results_mode):
