@@ -811,9 +811,9 @@ def thermal_zones(row, df, idf, origin):
         if element == "roof":
             return "{}_roof".format(construction)
         if element == "ceiling":
-            if construction.lower() == "construction1":
+            if construction.lower() == "const1":
                 raise RuntimeError("Quincha constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
-            if construction.lower() == "construction3":
+            if construction.lower() == "const3":
                 raise RuntimeError("Timber constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
             return "{}_ceiling".format(construction)
         if element == "ceiling_inverse":
