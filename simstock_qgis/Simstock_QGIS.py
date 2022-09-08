@@ -202,7 +202,7 @@ class SimstockQGIS:
             shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
             if os.path.exists(shoebox_output):
                 shutil.rmtree(shoebox_output)
-            epw_file = os.path.join(self.plugin_dir, "GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw")
+            epw_file = os.path.join(self.plugin_dir, "testing.epw")
             run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, shoebox_idf])
             if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
                 self.initial_tests.append("EnergyPlus could not run.")
