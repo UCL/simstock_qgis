@@ -40,11 +40,11 @@ import subprocess
 import pandas as pd
 import platform
 import sys
-import multiprocessing as mp
+#import multiprocessing as mp
 import qgis.utils
 from qgis.core import Qgis
 from qgis.core import NULL as qgis_null
-import time
+#import time
 import shutil
 import numpy as np
 import json
@@ -551,30 +551,38 @@ class SimstockQGIS:
             return all_results
 
         def extract_results(all_results, threshold_val):
-            """Extracts the results of interest from the individual dfs. 
-            This is currently quite inflexible and could be changed."""
+            """
+            Extracts the results of interest from the individual dfs. Returns 
+            a dict where the key is the zone name and the value is the results.
+            """
+
+            def get_result_val(output_name, df):
+                """Looks into zone result df for a given output. Returns 
+                the whole series of values."""
+                value_col = [col for col in df.columns if output_name in col]
+                if len(value_col) == 0:
+                    raise RuntimeError("Cannot find %s value for zone '%s' in results." % (output_name, zone))
+                series = df[value_col[0]] #should only be one col
+                return series
+            
+            # Set up dict
             extracted_results = {}
+
+            # Loop over each zone's results df
             for zone, df in all_results.items():
-                output_name = "Zone Operative Temperature"
-                operative_col = [col for col in df.columns if output_name in col]
-                if len(operative_col) == 0:
-                    raise RuntimeError("Cannot find Zone Operative Temperature for zone '%s' in results." % zone)
-                operative_series = df[operative_col[0]] #should only be one col
+                # Get operative temperature and use threshold to get hours above/below
+                operative_series = get_result_val("Zone Operative Temperature", df)
                 above = operative_series[operative_series > threshold_val].count()
                 below = operative_series[operative_series <= threshold_val].count()
-
-                def get_result_val(output_name, df):
-                    value_col = [col for col in df.columns if output_name in col]
-                    if len(value_col) == 0:
-                        raise RuntimeError("Cannot find %s value for zone '%s' in results." % (output_name, zone))
-                    series = df[value_col[0]] #should only be one col
-                    value = series.sum()
-                    return value
                 
-                elec = get_result_val("Electricity", df)
+                # Get electricity consumption
+                elec_series = get_result_val("Electricity", df)
+                elec = elec_series.sum()
                 elec = round(elec / (3.6E6), 2)
+
+                # Combine extracted results into list
                 lst = [above, below, elec] #TODO: this needs to be same order as attr_types, change to dict?
-                lst = list(map(float, lst)) #change from np float to float
+                lst = list(map(float, lst)) #change type from np float to float
                 extracted_results[zone] = lst
             return extracted_results
 
