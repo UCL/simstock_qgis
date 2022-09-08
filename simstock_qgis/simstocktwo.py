@@ -114,7 +114,7 @@ def main(idf_dir):
             # Set the name, zone name and ventilation rate
             zone_ventilation_dict["Name"] = zone + "_ventilation"
             zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
-            zone_ventilation_dict["Flow_Rate_per_Person"] = ventilation_rate
+            zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
 
             # Add the ventilation idf object
             idf.newidfobject(**zone_ventilation_dict)
@@ -1419,10 +1419,10 @@ ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
                     'Name': 'Dwell Nat Vent',
                     'Zone_or_ZoneList_Name': '',
                     'Schedule_Name': 'Dwell_Occ',
-                    'Design_Flow_Rate_Calculation_Method': 'Flow/Person',
+                    'Design_Flow_Rate_Calculation_Method': 'AirChanges/Hour',
                     'Design_Flow_Rate': '',
                     'Flow_Rate_per_Zone_Floor_Area': '',
-                    'Flow_Rate_per_Person': 0.008,
+                    'Flow_Rate_per_Person': '',
                     'Air_Changes_per_Hour': '',
                     'Ventilation_Type': 'NATURAL',
                     'Fan_Pressure_Rise': 0.0,
