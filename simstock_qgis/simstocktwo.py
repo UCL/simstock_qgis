@@ -751,10 +751,11 @@ def thermal_zones(row, df, idf, origin):
 
     ### Added features for Simstock QGIS plugin
     overhang_depth = row.overhang_depth
+    for i in floors:
+        print(row["FLOOR_{}: use".format(i)])
 
     # Select constructions
     glazing_const = "glazing"
-    
     def set_construction(construction, element):
         """
         if construction.lower() == "quincha":

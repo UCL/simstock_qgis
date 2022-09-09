@@ -432,6 +432,16 @@ class SimstockQGIS:
                     dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
                     raise Exception("Attribute '%s' was not found in the attribute table. Check that it is present and spelled correctly and try again." % heading)
+            
+            # Extract floor-specific attributes
+            max_floors = max(dfdict["nofloors"])
+            for x in range(max_floors):
+                heading = "FLOOR_{}: use".format(x)
+                try:
+                    dfdict[heading] = [feature[heading] for feature in self.features]
+                except KeyError:
+                    pass
+
             data = pd.DataFrame(dfdict)
             data = data.rename(columns={"UID":"osgb"})
             
@@ -640,7 +650,6 @@ class SimstockQGIS:
                 
                 # Grab the attributes from this feature
                 feature_attrs = self.features[i].attributes()
-                
                 if results_mode:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
