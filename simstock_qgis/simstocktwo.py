@@ -1254,6 +1254,8 @@ def external_walls(idf, zone_name, floor_number,
     '''
     Function which generates external wall energyplus object and return exposed
     walls and glazings areas
+    
+    Added overhang depth for the Simstock QGIS plugin
     '''
 
     def wall_width_height(i, ceil_coord, floor_coord):
@@ -1293,6 +1295,8 @@ def external_walls(idf, zone_name, floor_number,
         return
     
     def overhang(idf, window_name, depth):
+        """Adds a shading overhang to window with the specified depth. 
+        Used in the Simstock QGIS plugin."""
         if isinstance(depth, float) or isinstance(depth, int):
             if depth > 0:
                 idf.newidfobject('SHADING:OVERHANG',
@@ -1366,7 +1370,7 @@ def external_walls(idf, zone_name, floor_number,
                        building_surface_name, starting_x_coordinate,
                        starting_z_coordinate, win_length, win_height)
 
-                # Add overhang to each window of custom depth
+                # Plugin: add overhang to each window of custom depth
                 overhang(idf, win_surface_name, overhang_depth)
     return
 
@@ -1414,6 +1418,7 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
 
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+# Simstock QGIS plugin
 # This is used as default values to build the per zone ventilation objects
 ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
                     'Name': 'Dwell Nat Vent',
