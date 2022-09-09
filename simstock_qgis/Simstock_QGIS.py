@@ -633,8 +633,12 @@ class SimstockQGIS:
                         # Prepend floor number to result base name
                         attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
 
-                        # Using "Double" type (float) for all fields #TODO: this needs changing esp for "use"
-                        new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
+                        if results_mode:
+                            # Using "Double" type (float) for all results fields
+                            new_attrs.append(QgsField(attr_name_floor, QVariant.Double))
+                        else:
+                            # Using "String" type for all fields (should only be 'use')
+                            new_attrs.append(QgsField(attr_name_floor, QVariant.String))
 
             # Get the names of each newly created attribute
             #attr_names = [attr.name() for attr in new_attrs]
