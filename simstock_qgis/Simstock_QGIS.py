@@ -566,7 +566,7 @@ class SimstockQGIS:
                 series = df[value_col[0]] #should only be one col
                 return series
             
-            # Set up dict
+            # Set up empty dict and get post-processing values
             extracted_results = {}
             cooling_COP = float(self.config["Cooling COP"])
             grid_factor = float(self.config["Grid factor - kgCO2/kWh"])
@@ -668,8 +668,13 @@ class SimstockQGIS:
                     feature_attrs.extend(result_vals)
                 
                 # Add the UID but only if it doesn't already exist
-                elif not results_mode and "UID" not in feature_attrs:
-                    feature_attrs.append(self.unique_ids[i])
+                elif not results_mode:
+                    done = False
+                    for feature in feature_attrs:
+                        if "UID" in str(feature):
+                            done = True
+                    if not done:
+                        feature_attrs.append(self.unique_ids[i])
 
                 # Set the feature's attributes
                 self.features[i].setAttributes(feature_attrs)
