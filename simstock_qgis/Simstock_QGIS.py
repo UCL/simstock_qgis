@@ -551,7 +551,7 @@ class SimstockQGIS:
 
             return all_results
 
-        def extract_results(all_results, threshold_val):
+        def extract_results(all_results):
             """
             Extracts the results of interest from the individual dfs. Returns 
             a dict where the key is the zone name and the value is the results.
@@ -574,10 +574,10 @@ class SimstockQGIS:
 
             # Loop over each zone's results df
             for zone, df in all_results.items():
-                # Get operative temperature and use threshold to get hours above/below
+                # Get operative temperature and use thresholds to get hours above/below
                 operative_series = get_result_val("Zone Operative Temperature", df)
-                above = operative_series[operative_series > threshold_val].count()
-                below = operative_series[operative_series <= threshold_val].count()
+                below = operative_series[operative_series < self.low_temp_threshold].count()
+                above = operative_series[operative_series > self.high_temp_threshold].count()
                 
                 # Get electricity consumption
                 elec = get_result_val("Electricity", df).sum()
@@ -598,7 +598,7 @@ class SimstockQGIS:
                 total_cost = round(energy * elec_cost, 2)
 
                 # Combine extracted results into list
-                lst = [above, below, energy, co2_emissions, total_cost] #TODO: this needs to be same order as attr_types, change to dict?
+                lst = [below, above, energy, co2_emissions, total_cost] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change type from np float to float
                 extracted_results[zone] = lst
 
@@ -703,13 +703,14 @@ class SimstockQGIS:
         if results_mode:
             # Extract the results from the csvs by thermal zone
             all_results = make_allresults_dict()
-            op_temp_threshold = float(self.config["Operative temperature threshold"])
+            self.low_temp_threshold = float(self.config["Low temperature threshold"])
+            self.high_temp_threshold = float(self.config["High temperature threshold"])
             currency = self.config["Currency"]
-            extracted_results = extract_results(all_results, op_temp_threshold)
+            extracted_results = extract_results(all_results)
 
             # The base names of the results fields to be added (floor number will be appended to these)
-            attr_types = ["Hours above {}C operative temperature".format(op_temp_threshold),
-                            "Hours below {}C operative temperature".format(op_temp_threshold),
+            attr_types = ["Hours below {}C operative temperature".format(self.low_temp_threshold),
+                            "Hours above {}C operative temperature".format(self.high_temp_threshold),
                             "Electricity consumption (kWh/yr)",
                             "CO2 emissions (kg/yr)",
                             "Electricity cost ({}/yr)".format(currency)]
