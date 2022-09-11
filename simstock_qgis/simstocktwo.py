@@ -60,7 +60,8 @@ def main(idf_dir):
 
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = df.loc[df['shading'] == False]
-        zones_df.apply(thermal_zones, args=(df, idf, origin,), axis=1)
+        zone_use_dict = {} #mixed-use for plugin
+        zones_df.apply(thermal_zones, args=(df, idf, origin, zone_use_dict,), axis=1)
 
         # Extract names of thermal zones:
         zones = idf.idfobjects['ZONE']
@@ -74,9 +75,11 @@ def main(idf_dir):
         objects = idf.idfobjects['ZONELIST'][-1]
         for i, zone in enumerate(zone_names):
             exec('objects.Zone_%s_Name = zone' % (i + 1))
+        
+        # Plugin feature: mixed-use
+        mixed_use(idf, zone_use_dict)
 
         # Ideal loads system
-        #ventilation_rates = zones_df[["osgb", "ventilation_rate"]]
         for zone in zone_names:
             system_name = '{}_HVAC'.format(zone)
             eq_name = '{}_Eq'.format(zone)
@@ -163,6 +166,25 @@ def main(idf_dir):
     pt('##### idf_geometry created in:', start)
 
 # END OF MAIN  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def mixed_use(idf, zone_use_dict):
+
+    # Check for missing values
+    for key, value in zone_use_dict.items():
+        if not isinstance(value, str) and math.isnan(value):
+            raise ValueError("{} has no value for 'use'.".format(key))
+
+    # Create a zonelist for each use
+    use_list = list(set(list(zone_use_dict.values())))
+    for use in use_list:
+        zone_list = list()
+        for key, value in zone_use_dict.items():
+            if value == use:
+                zone_list.append(key)
+        idf.newidfobject('ZONELIST', Name=use)
+        objects = idf.idfobjects['ZONELIST'][-1]
+        for i, zone in enumerate(zone_list):
+            exec('objects.Zone_%s_Name = zone' % (i + 1))
 
 
 def pt(printout, pst):
@@ -725,7 +747,7 @@ def idf_wall_coordinates(i, ceiling_coordinates, floor_coordinates):
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
-def thermal_zones(row, df, idf, origin):
+def thermal_zones(row, df, idf, origin, zone_use_dict):
     polygon = loads(row.sa_polygon)
     # Polygon with removed collinear point to be used for ceiling/floor/roof
     hor_polygon = row.sa_polygon_horizontal
@@ -751,8 +773,8 @@ def thermal_zones(row, df, idf, origin):
 
     ### Added features for Simstock QGIS plugin
     overhang_depth = row.overhang_depth
-    for i in floors:
-        print(row["FLOOR_{}: use".format(i)])
+    #for i in floors:
+    #    print(row["FLOOR_{}: use".format(i)])
 
     # Select constructions
     glazing_const = "glazing"
@@ -824,6 +846,7 @@ def thermal_zones(row, df, idf, origin):
     if len(floors) == 1:
         floor_no = int(1)
         zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+        zone_use_dict[zone_name] = row["FLOOR_1: use"]
         zone_floor_h = 0
         space_below_floor = 'Ground'
         zone_ceiling_h = height
@@ -897,6 +920,7 @@ def thermal_zones(row, df, idf, origin):
             floor_no = item + 1
             if item == 0:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
                 zone_floor_h = item * f2f
                 space_below_floor = 'Ground'
                 zone_ceiling_h = floor_no * f2f
@@ -967,6 +991,7 @@ def thermal_zones(row, df, idf, origin):
 
             elif item == row.nofloors - 1:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
                 zone_floor_h = item * f2f
                 space_below_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no - 1))
@@ -1037,6 +1062,7 @@ def thermal_zones(row, df, idf, origin):
 
             else:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
                 zone_floor_h = item * f2f
                 space_below_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no - 1))
