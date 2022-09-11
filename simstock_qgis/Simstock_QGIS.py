@@ -436,7 +436,7 @@ class SimstockQGIS:
             # Extract floor-specific attributes
             max_floors = max(dfdict["nofloors"])
             for x in range(max_floors):
-                heading = "FLOOR_{}: use".format(x)
+                heading = "FLOOR_{}: use".format(x+1)
                 try:
                     dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
@@ -631,7 +631,7 @@ class SimstockQGIS:
                     for attr_type in attr_types:
 
                         # Prepend floor number to result base name
-                        attr_name_floor = "FLOOR_" + str(i) + ": " + attr_type
+                        attr_name_floor = "FLOOR_" + str(i+1) + ": " + attr_type
 
                         if results_mode:
                             # Using "Double" type (float) for all results fields
@@ -657,6 +657,7 @@ class SimstockQGIS:
                 if results_mode:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
+                    print(f"Retrieving results for '{osgb}'...")
 
                     # Find the BI ref
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
@@ -671,8 +672,9 @@ class SimstockQGIS:
                         for j, zone in enumerate(thermal_zones):
 
                             # Check the order is correct
+                            print(f"    Found results for floor {j+1}: '{zone}'")
                             if zone[-1] != str(j+1):
-                                print("Floor results are in the wrong order.")
+                                print(f"Floor results are in the wrong order for zone '{zone}'.")
 
                             # Collect the results for the thermal zone
                             result_vals.extend(extracted_results[zone])
