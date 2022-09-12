@@ -440,7 +440,8 @@ class SimstockQGIS:
                 try:
                     dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
-                    pass
+                    print("""Could not find 'use' column(s). Assuming all zones to be 'Dwell'.\n
+                          To add the 'use' columns, fill out the 'nofloors' column and then use 'Add Fields' afterwards.""")
 
             data = pd.DataFrame(dfdict)
             data = data.rename(columns={"UID":"osgb"})

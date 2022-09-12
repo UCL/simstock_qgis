@@ -71,10 +71,10 @@ def main(idf_dir):
 
         # Create a 'Dwell' zone list with all thermal zones. "Dwell" apears
         # in all objects which reffer to all zones (thermostat, people, etc.)
-        idf.newidfobject('ZONELIST', Name='List')
-        objects = idf.idfobjects['ZONELIST'][-1]
-        for i, zone in enumerate(zone_names):
-            exec('objects.Zone_%s_Name = zone' % (i + 1))
+        #idf.newidfobject('ZONELIST', Name='List')
+        #objects = idf.idfobjects['ZONELIST'][-1]
+        #for i, zone in enumerate(zone_names):
+        #    exec('objects.Zone_%s_Name = zone' % (i + 1))
         
         # Plugin feature: mixed-use
         mixed_use(idf, zone_use_dict)
@@ -859,7 +859,10 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     if len(floors) == 1:
         floor_no = int(1)
         zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
-        zone_use_dict[zone_name] = row["FLOOR_1: use"]
+        try:
+            zone_use_dict[zone_name] = row["FLOOR_1: use"]
+        except KeyError:
+            zone_use_dict[zone_name] = "Dwell"
         zone_floor_h = 0
         space_below_floor = 'Ground'
         zone_ceiling_h = height
@@ -933,7 +936,10 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
             floor_no = item + 1
             if item == 0:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
-                zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
+                try:
+                    zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
+                except KeyError:
+                    zone_use_dict[zone_name] = "Dwell"
                 zone_floor_h = item * f2f
                 space_below_floor = 'Ground'
                 zone_ceiling_h = floor_no * f2f
@@ -1004,7 +1010,10 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
             elif item == row.nofloors - 1:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
-                zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
+                try:
+                    zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
+                except KeyError:
+                    zone_use_dict[zone_name] = "Dwell"
                 zone_floor_h = item * f2f
                 space_below_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no - 1))
@@ -1075,7 +1084,10 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
             else:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
-                zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
+                try:
+                    zone_use_dict[zone_name] = row["FLOOR_{}: use".format(floor_no)]
+                except KeyError:
+                    zone_use_dict[zone_name] = "Dwell"
                 zone_floor_h = item * f2f
                 space_below_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no - 1))
