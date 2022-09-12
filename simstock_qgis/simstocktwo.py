@@ -793,51 +793,11 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     glazing_const = "glazing"
     def set_construction(construction, element):
         """
-        if construction.lower() == "quincha":
-            if element == "ground_floor":
-                return "ground_floor_quincha"
-            if element == "wall":
-                return "quincha_wall"
-            if element == "roof":
-                return "mud_roof"
-            if element == "ceiling":
-                raise RuntimeError("Quincha constructions can only have one floor. Check polygon '%s'" % row.osgb)
-        if construction.lower() == "adobe":
-            if element == "ground_floor":
-                return "ground_floor_adobe"
-            if element == "wall":
-                return "adobe_wall"
-            if element == "roof":
-                return "mud_roof"
-            if element == "ceiling":
-                return "wood_ceiling"
-        if construction.lower() == "timber":
-            if element == "ground_floor":
-                return "ground_floor_timber"
-            if element == "wall":
-                return "timber_wall"
-            if element == "roof":
-                return "metal_roof_for_timber_wall"
-            if element == "ceiling":
-                raise RuntimeError("Timber constructions can only have one floor. Check polygon '%s'" % row.osgb)
-        if construction.lower() == "brick1":
-            if element == "ground_floor":
-                return "ground_floor_brick"
-            if element == "wall":
-                return "brick_wall"
-            if element == "roof":
-                return "metal_roof_for_brick_wall"
-            if element == "ceiling":
-                return "concrete_ceiling"
-        if construction.lower() == "brick2":
-            if element == "ground_floor":
-                return "ground_floor_brick"
-            if element == "wall":
-                return "brick_wall"
-            if element == "roof":
-                return "reinforced_concrete_roof"
-            if element == "ceiling":
-                return "concrete_ceiling"
+        Returns the relevant name of the building surface depending on the 
+        construction name.
+        
+        Raises an error if Quincha or Timber constructions are given more than 
+        one floor.
         """
         # If none of the presets are used, resort to custom construction:
         if element == "ground_floor":
