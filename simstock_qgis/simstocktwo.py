@@ -71,7 +71,7 @@ def main(idf_dir):
 
         # Create a 'Dwell' zone list with all thermal zones. "Dwell" apears
         # in all objects which reffer to all zones (thermostat, people, etc.)
-        idf.newidfobject('ZONELIST', Name='Dwell')
+        idf.newidfobject('ZONELIST', Name='List')
         objects = idf.idfobjects['ZONELIST'][-1]
         for i, zone in enumerate(zone_names):
             exec('objects.Zone_%s_Name = zone' % (i + 1))
@@ -118,6 +118,7 @@ def main(idf_dir):
             zone_ventilation_dict["Name"] = zone + "_ventilation"
             zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
             zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
+            zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
 
             # Add the ventilation idf object
             idf.newidfobject(**zone_ventilation_dict)
@@ -185,6 +186,18 @@ def mixed_use(idf, zone_use_dict):
         objects = idf.idfobjects['ZONELIST'][-1]
         for i, zone in enumerate(zone_list):
             exec('objects.Zone_%s_Name = zone' % (i + 1))
+    
+    objects_to_delete = list()
+    for obj in ['PEOPLE', 'LIGHTS', 'ELECTRICEQUIPMENT',
+                'ZONEINFILTRATION:DESIGNFLOWRATE',
+                'ZONECONTROL:THERMOSTAT']:
+        objects = idf.idfobjects[obj]
+        for item in objects:
+            if item.Zone_or_ZoneList_Name not in use_list:
+                objects_to_delete.append(item)
+
+    for item in objects_to_delete:
+        idf.removeidfobject(item)
 
 
 def pt(printout, pst):
