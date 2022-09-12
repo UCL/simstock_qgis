@@ -540,7 +540,10 @@ class SimstockQGIS:
             lst = lst[lst!=""]      #strip blank objects out
             zonelist = lst[2:]      #remove headers
             
-            return zonelist
+            # Better approach
+            all_zones = np.array([zone.Name for zone in idf.idfobjects["ZONE"]])
+
+            return all_zones
 
         def make_allresults_dict():
             """Returns a dict where the key is the name of the thermal
@@ -1060,10 +1063,11 @@ class SimstockQGIS:
         # Choose heating & cooling setpoint schedules according to check
         if self.HeatCool.lower() == "false":
             print("Heating and cooling are not activated.")
-            thermostat = idf.idfobjects["ThermostatSetpoint:DualSetpoint"][0]
-            # Swap the names
-            thermostat.Heating_Setpoint_Temperature_Schedule_Name = "Dwell_Heat_Off"
-            thermostat.Cooling_Setpoint_Temperature_Schedule_Name = "Dwell_Cool_Off"
+            thermostats = idf.idfobjects["ThermostatSetpoint:DualSetpoint"]
+            for thermostat in thermostats:
+                # Swap the names
+                thermostat.Heating_Setpoint_Temperature_Schedule_Name = "Dwell_Heat_Off"
+                thermostat.Cooling_Setpoint_Temperature_Schedule_Name = "Dwell_Cool_Off"
         elif self.HeatCool.lower() == "true":
             # Schedules already have the correct names in this case
             print("Heating and cooling are activated.")
