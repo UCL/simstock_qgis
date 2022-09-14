@@ -795,11 +795,10 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
         """
         Returns the relevant name of the building surface depending on the 
         construction name.
-        
+
         Raises an error if Quincha or Timber constructions are given more than 
         one floor.
         """
-        # If none of the presets are used, resort to custom construction:
         if element == "ground_floor":
             return "{}_ground_floor".format(construction)
         if element == "wall":
@@ -1448,7 +1447,7 @@ ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
                     'Temperature_Term_Coefficient': 0.0,
                     'Velocity_Term_Coefficient': 0.0,
                     'Velocity_Squared_Term_Coefficient': 0.0,
-                    'Minimum_Indoor_Temperature': 40.0,
+                    'Minimum_Indoor_Temperature': 18.0,
                     'Minimum_Indoor_Temperature_Schedule_Name': '',
                     'Maximum_Indoor_Temperature': 100.0,
                     'Maximum_Indoor_Temperature_Schedule_Name': '',
