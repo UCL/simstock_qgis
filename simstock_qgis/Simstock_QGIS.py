@@ -424,7 +424,6 @@ class SimstockQGIS:
             
             # Extract all other required Simstock data from layer
             headings = [heading.split("-")[0] for heading in self.headings]
-            # TODO: test shading as bool
             dfdict = {}
             dfdict[headings[0]] = polygon
             for heading in headings[1:]:
@@ -477,7 +476,7 @@ class SimstockQGIS:
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
-            first.main() #TODO: edit BI function with Ivan's shading solution
+            first.main() #TODO: edit BI function with Ivan's shading buffer solution
             self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
             second.main(idf_dir = self.idf_dir)
             
@@ -490,7 +489,6 @@ class SimstockQGIS:
                 # Weather file
                 self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
                 
-                # TODO: put reference to which E+ idf failed
                 if not multiprocessing: # Single core
                     print("Running EnergyPlus simulation on a single core...")
                     for i, idf_file in enumerate(self.idf_files):
@@ -764,7 +762,6 @@ class SimstockQGIS:
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
-            # TODO: comment out all the floor-specific field stuff if not required
             attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
 
@@ -1079,7 +1076,6 @@ class SimstockQGIS:
 
         # Check whether heating and cooling setpoints are to be included
         self.HeatCool = str(dfs["DB-HeatingCooling-OnOff"].iloc[0,0])
-        #TODO: test with bool type, probably necessary for Mac
         if not isinstance(self.HeatCool, str):
             print("type ", type(self.HeatCool), self.HeatCool)
             raise NotImplementedError("self.HeatCool is %s type" % type(self.HeatCool))
