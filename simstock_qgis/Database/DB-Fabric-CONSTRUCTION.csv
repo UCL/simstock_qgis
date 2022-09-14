@@ -21,4 +21,4 @@ const5_ground_floor,concrete_floor_slab,ceramic,wood_boards,,,,,,,,ground floor 
 const5_ceiling,structural_concrete,,,,,,,,,,ceiling for brick2
 const5_ceiling_inverse,structural_concrete,,,,,,,,,,inverse ceiling for brick2
 glazing,4mm_clear,,,,,,,,,,window construction
-partition,wood_boards,,,,,,,,,,partition wall
+partition,brick_hollow,,,,,,,,,,partition wall
