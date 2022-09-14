@@ -11,8 +11,8 @@ cement_sand_plaster,Rough,0.01,0.72,1860,1000,0.9,0.73,0.73,
 brick_solid_for_wall,Rough,0.13,0.56,1353,840,0.9,0.73,0.73,
 mud,Rough,0.12,0.568,1650,1000,0.9,0.73,0.73,
 metal_corrugated_sheet,Rough,0.0004,80,5000,510,0.9,0.73,0.73,
-insulation_1,Rough,0.05,0.033,60,1400,0.9,0.73,0.73,
-insulation_2,Rough,0.05,0.033,60,1400,0.9,0.73,0.73,
+insulation_1,Rough,0.05,0.033,60,1400,0.9,0.73,0.73,Used in const3 roof
+insulation_2,Rough,0.05,0.033,60,1400,0.9,0.73,0.73,Used in const4 roof
 brick_external_for_roof,Rough,0.03,0.71,1450,800,0.9,0.73,0.73,
 cement_mortar,Rough,0.02,0.72,1860,1000,0.9,0.73,0.73,
 structural_concrete,Rough,0.05,1.9,2300,1000,0.9,0.73,0.73,
