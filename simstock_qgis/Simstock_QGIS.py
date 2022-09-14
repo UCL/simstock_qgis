@@ -432,6 +432,28 @@ class SimstockQGIS:
                     dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
                     raise Exception("Attribute '%s' was not found in the attribute table. Check that it is present and spelled correctly and try again." % heading)
+
+            # Data checks
+            # Check values which are required for all polygons
+            for y, value in enumerate(dfdict["shading"]):
+                if isinstance(value, str) and value.lower() not in ["false", "true"]:
+                    raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Received: '%s' for %s" % (value, dfdict["UID"][y]))
+                if isinstance(dfdict["height"][y], QVariant):
+                    raise ValueError("Check 'height' value for %s" % dfdict["UID"][y])
+                if dfdict["UID"][y] == "":
+                    raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
+
+            # Check values which are required for only non-shading polygons
+            for y, value in enumerate(dfdict["shading"]):
+                if str(value).lower() == "false":
+                    if isinstance(dfdict["wwr"][y], QVariant):
+                        raise ValueError("Check 'wwr' value for %s" % dfdict["UID"][y])
+                    if dfdict["construction"][y] == "":
+                        raise ValueError("Check 'construction' value for %s" % dfdict["UID"][y])
+                    if isinstance(dfdict["ventilation_rate"][y], QVariant):
+                        raise ValueError("Check 'ventilation_rate' value for %s" % dfdict["UID"][y])
+                    if isinstance(dfdict["nofloors"][y], QVariant):
+                        raise ValueError("Check 'nofloors' value for %s" % dfdict["UID"][y])
             
             # Extract floor-specific attributes
             max_floors = max(dfdict["nofloors"])
@@ -465,9 +487,10 @@ class SimstockQGIS:
             def run_simulation(multiprocessing = True): #TODO: maybe remove old results before simulating
                 #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
 
-                #TODO: replace default weather file with auto-select script or default file
+                # Weather file
                 self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
                 
+                # TODO: put reference to which E+ idf failed
                 if not multiprocessing: # Single core
                     print("Running EnergyPlus simulation on a single core...")
                     for i, idf_file in enumerate(self.idf_files):
@@ -1055,7 +1078,7 @@ class SimstockQGIS:
                 add_materials(key, df, used_materials)
 
         # Check whether heating and cooling setpoints are to be included
-        self.HeatCool = dfs["DB-HeatingCooling-OnOff"].iloc[0,0]
+        self.HeatCool = str(dfs["DB-HeatingCooling-OnOff"].iloc[0,0])
         #TODO: test with bool type, probably necessary for Mac
         if not isinstance(self.HeatCool, str):
             print("type ", type(self.HeatCool), self.HeatCool)
