@@ -33,7 +33,7 @@ class EP_Run():
         #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file], cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode == 1:
-            raise RuntimeError(out.stderr)
+            raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_file)
         
     def run_ep_multi(self, cores):
         p = mp.Pool(cores)

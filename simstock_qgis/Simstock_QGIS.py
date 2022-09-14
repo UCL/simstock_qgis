@@ -380,7 +380,7 @@ class SimstockQGIS:
         output_dir = idf_fname[:-4]
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname], cwd=self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode != 0:
-            raise RuntimeError(out.stderr)
+            raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_fname)
         #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
         #    f.write(str(out))# + "\n") #for debugging purposes only
 
