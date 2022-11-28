@@ -127,8 +127,22 @@ def main():
             building_object = idf.idfobjects['BUILDING'][0]
             building_object.Name = bi
             
+            # Get the data for the BI
             bi_df = df[df['bi'] == bi]
-            createidfs(bi_df, "bi")
+            #buffer = unary_union(bi_df.geometry]).convex_hull.buffer(50)
+
+            # Get the data for other BIs for shading
+            other_shading_df = df[df['bi'] != bi]
+            other_shading_df['shading'] = True
+
+            bi_df = pd.concat([bi_df, other_shading_df]) #include other BIs as shading
+            shading_vals = bi_df['shading'].to_numpy()
+            
+            # Only create idf if the BI is not entirely composed of shading blocks
+            if not shading_vals.all():
+                createidfs(bi_df, "bi")
+            else:
+                continue
             
     else:
         # Change the name field of the building object
