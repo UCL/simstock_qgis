@@ -14,6 +14,22 @@ pip install eppy
 pip install geopandas==0.9.0
 ```
 
+## Mixed-use
+The following objects must exist for mixed-use:
+* Schedules
+    * Occ
+    * Heat
+    * Cool
+    * Equip
+    * Light
+* People
+* Lights
+* Equipment
+* Zone Infiltration: Design Flow Rate
+* Zone Ventilation: Design Flow Rate
+* Zone Control: Thermostat
+* Thermostat Set Point: Dual Set Point
+
 ## 1_preprocessing.py
 
 Changeable fields:
