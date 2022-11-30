@@ -8,6 +8,10 @@ from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing, M
 import geopandas as gpd
 import argparse
 
+# List of added functionality:
+# - Built islands
+#   - Identifies touching polygons
+#   - Outputs unique BI ref column
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
