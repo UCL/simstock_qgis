@@ -9,6 +9,18 @@ from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 import argparse
 
+# List of added functionality:
+# - EnergyPlus idd path can be specified
+# - Takes filename argument
+# - Creates separate idfs for BIs if "-b" arg is provided
+# - Supports mixed-use with columns in format "floor_x_use" starting from x=1
+#     - IDF objects for specified uses must be present in basic settings
+#     - If use column is missing, or value not provided, defaults to "Dwell"
+# - If "shading" is stated as a use:
+#     - Uses adiabatic floors and ceilings for the block and adjacent surfaces
+#     - There will be no heating/cooling demand from these zones
+
+
 ### SPECIFY PATH TO E+ v8.9 IDD FILE HERE
 iddfile = r'C:\EnergyPlusV8-9-0\Energy+.idd'
 
@@ -66,7 +78,8 @@ def main():
 
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = df.loc[df['shading'] == False]
-        zones_df.apply(thermal_zones, args=(df, idf, origin,), axis=1)
+        zone_use_dict = {} #mixed-use
+        zones_df.apply(thermal_zones, args=(df, idf, origin, zone_use_dict,), axis=1)
 
         # Extract names of thermal zones:
         zones = idf.idfobjects['ZONE']
@@ -76,10 +89,13 @@ def main():
 
         # Create a 'Dwell' zone list with all thermal zones. "Dwell" apears
         # in all objects which reffer to all zones (thermostat, people, etc.)
-        idf.newidfobject('ZONELIST', Name='Dwell')
-        objects = idf.idfobjects['ZONELIST'][-1]
-        for i, zone in enumerate(zone_names):
-            exec('objects.Zone_%s_Name = zone' % (i + 1))
+        #idf.newidfobject('ZONELIST', Name='Dwell')
+        #objects = idf.idfobjects['ZONELIST'][-1]
+        #for i, zone in enumerate(zone_names):
+        #    exec('objects.Zone_%s_Name = zone' % (i + 1))
+
+        # Mixed-use
+        mixed_use(idf, zone_use_dict)
 
         # Ideal loads system
         for zone in zone_names:
@@ -154,6 +170,40 @@ def main():
     pt('##### idf_geometry created in:', start)
 
 # END OF MAIN  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def mixed_use(idf, zone_use_dict):
+
+    # Check for missing values
+    #for key, value in zone_use_dict.items():
+    #    if not isinstance(value, str) and math.isnan(value):
+    #        raise ValueError("{} has no value for 'use'.".format(key))
+
+    # Create a zonelist for each use
+    use_list = list(zone_use_dict.values())
+    use_list = list(map(str.lower, use_list)) #remove case-sensitivity
+    use_list = list(set(use_list))
+    for use in use_list:
+        zone_list = list()
+        for key, value in zone_use_dict.items():
+            if value.lower() == use:
+                zone_list.append(key)
+        idf.newidfobject('ZONELIST', Name=use)
+        objects = idf.idfobjects['ZONELIST'][-1]
+        for i, zone in enumerate(zone_list):
+            exec('objects.Zone_%s_Name = zone' % (i + 1))
+    
+    objects_to_delete = list()
+    for obj in ['PEOPLE', 'LIGHTS', 'ELECTRICEQUIPMENT',
+                'ZONEINFILTRATION:DESIGNFLOWRATE',
+                'ZONECONTROL:THERMOSTAT',
+                'ZoneVentilation:DesignFlowRate']:
+        objects = idf.idfobjects[obj]
+        for item in objects:
+            if item.Zone_or_ZoneList_Name.lower() not in use_list:
+                objects_to_delete.append(item)
+
+    for item in objects_to_delete:
+        idf.removeidfobject(item)
 
 
 def pt(printout, pst):
@@ -716,7 +766,7 @@ def idf_wall_coordinates(i, ceiling_coordinates, floor_coordinates):
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
-def thermal_zones(row, df, idf, origin):
+def thermal_zones(row, df, idf, origin, zone_use_dict):
     polygon = loads(row.sa_polygon)
     # Polygon with removed collinear point to be used for ceiling/floor/roof
     hor_polygon = row.sa_polygon_horizontal
@@ -740,9 +790,58 @@ def thermal_zones(row, df, idf, origin):
     construction = row.construction
     glazing_const = '{}_glazing'.format(construction)
 
+    def zone_use(row, zone_name, zone_use_dict, floor_no):
+        """
+        - Records the zone use in zone_use_dict
+        - Applies "Dwell" use if none specified
+        - Returns the zone use
+        """
+        try:
+            # Find use value if column exists
+            use = row["floor_{}_use".format(floor_no)]
+            zone_use_dict[zone_name] = use
+            # Check that the value is not blank
+            if isinstance(use, float) and math.isnan(use):
+                # Give the "Dwell" use if use value is not present
+                zone_use_dict[zone_name] = "Dwell"
+        except KeyError:
+            # Give the "Dwell" use if use column is not present
+            zone_use_dict[zone_name] = "Dwell"
+        return zone_use_dict[zone_name]
+    
+    def adiabatic_for_shading(row, space_below_floor, space_above_floor):
+        """
+        Checks if the zone below/above is shading. Returns "shading" str if so,
+        since the name of the zone below/above is only needed to create non-adiabatic
+        floors/ceilings.
+        """
+        if space_below_floor != "Ground":
+            floor_use_index = "_".join(space_below_floor.split("_")[1:]) + "_use"
+            try:
+                use_below = row[floor_use_index]
+            except KeyError:
+                use_below = ""
+            if isinstance(use_below, str) and use_below.lower() == "shading":
+                space_below_floor = "shading"
+
+        if space_above_floor != "Outdoors":
+            floor_use_index = "_".join(space_above_floor.split("_")[1:]) + "_use"
+            try:
+                use_above = row[floor_use_index]
+            except KeyError:
+                use_above = ""
+            if isinstance(use_above, str) and use_above.lower() == "shading":
+                space_above_floor = "shading"
+
+        return space_below_floor, space_above_floor
+
     if len(floors) == 1:
         floor_no = int(1)
         zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+        use = zone_use(row, zone_name, zone_use_dict, floor_no)
+        if use.lower() == "shading":
+            raise RuntimeError("%s only has 1 floor and the use is 'shading'. "
+                               "Specify 'TRUE' in the shading column instead." % row["osgb"])
         zone_floor_h = 0
         space_below_floor = 'Ground'
         zone_ceiling_h = height
@@ -752,11 +851,11 @@ def thermal_zones(row, df, idf, origin):
 
         floor_const = '{}_solid_ground_floor'.format(construction)
         floor(idf, zone_name, space_below_floor, horiz_surf_coord,
-              zone_floor_h, floor_const)
+              zone_floor_h, floor_const, use=use)
 
         roof_const = '{}_flat_roof'.format(construction)
         roof_ceiling(idf, zone_name, space_above_floor,
-                     horiz_surf_coord, zone_ceiling_h, roof_const)
+                     horiz_surf_coord, zone_ceiling_h, roof_const, use=use)
 
         zone_height = zone_ceiling_h - zone_floor_h
         wall_const = '{}_wall'.format(construction)
@@ -816,20 +915,22 @@ def thermal_zones(row, df, idf, origin):
             floor_no = item + 1
             if item == 0:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                use = zone_use(row, zone_name, zone_use_dict, floor_no)
                 zone_floor_h = item * f2f
                 space_below_floor = 'Ground'
                 zone_ceiling_h = floor_no * f2f
                 space_above_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no + 1))
+                space_below_floor, space_above_floor = adiabatic_for_shading(row, space_below_floor, space_above_floor)
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
                 floor_const = '{}_solid_ground_floor'.format(construction)
                 floor(idf, zone_name, space_below_floor,
-                      horiz_surf_coord, zone_floor_h, floor_const)
+                      horiz_surf_coord, zone_floor_h, floor_const, use=use)
                 roof_const = 'ceiling'
                 roof_ceiling(idf, zone_name, space_above_floor,
-                             horiz_surf_coord, zone_ceiling_h, roof_const)
+                             horiz_surf_coord, zone_ceiling_h, roof_const, use=use)
 
                 zone_height = zone_ceiling_h - zone_floor_h
                 wall_const = '{}_wall'.format(construction)
@@ -886,20 +987,22 @@ def thermal_zones(row, df, idf, origin):
 
             elif item == row.nofloors - 1:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                use = zone_use(row, zone_name, zone_use_dict, floor_no)
                 zone_floor_h = item * f2f
                 space_below_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no - 1))
                 zone_ceiling_h = height
                 space_above_floor = 'Outdoors'
+                space_below_floor, space_above_floor = adiabatic_for_shading(row, space_below_floor, space_above_floor)
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
                 floor_const = 'ceiling_inverse'
                 floor(idf, zone_name, space_below_floor,
-                      horiz_surf_coord, zone_floor_h, floor_const)
+                      horiz_surf_coord, zone_floor_h, floor_const, use=use)
                 roof_const = '{}_flat_roof'.format(construction)
                 roof_ceiling(idf, zone_name, space_above_floor,
-                             horiz_surf_coord, zone_ceiling_h, roof_const)
+                             horiz_surf_coord, zone_ceiling_h, roof_const, use=use)
 
                 zone_height = zone_ceiling_h - zone_floor_h
                 wall_const = '{}_wall'.format(construction)
@@ -956,22 +1059,24 @@ def thermal_zones(row, df, idf, origin):
 
             else:
                 zone_name = '{}_floor_{}'.format(row.osgb, floor_no)
+                use = zone_use(row, zone_name, zone_use_dict, floor_no)
                 zone_floor_h = item * f2f
                 space_below_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no - 1))
                 zone_ceiling_h = floor_no * f2f
                 space_above_floor = '{}_floor_{}'.format(
                     row.osgb, (floor_no + 1))
+                space_below_floor, space_above_floor = adiabatic_for_shading(row, space_below_floor, space_above_floor)
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
                 floor_const = 'ceiling_inverse'
                 floor(idf, zone_name, space_below_floor,
-                      horiz_surf_coord, zone_floor_h, floor_const)
+                      horiz_surf_coord, zone_floor_h, floor_const, use=use)
                 roof_const = 'ceiling'
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h,
-                             roof_const)
+                             roof_const, use=use)
 
                 zone_height = zone_ceiling_h - zone_floor_h
                 wall_const = '{}_wall'.format(construction)
@@ -1032,7 +1137,7 @@ def thermal_zones(row, df, idf, origin):
 
 
 def floor(idf, zone_name, space_below_floor, horizontal_surface_coordinates,
-          floor_height, ground_floor_const):
+          floor_height, ground_floor_const, use):
     '''
     Function which generates floor energyplus object
     '''
@@ -1065,6 +1170,10 @@ def floor(idf, zone_name, space_below_floor, horizontal_surface_coordinates,
     # condition to the 'Ground'
     if space_below_floor == 'Ground':
         outside_boundary_condition = space_below_floor
+        outside_boundary_condition_object = ''
+    # If the space below or the zone itself is shading then use adiabatic floor
+    elif space_below_floor.lower() == "shading" or use == "shading":
+        outside_boundary_condition = "Adiabatic"
         outside_boundary_condition_object = ''
     # If space below the floor is thermal zone than set up outside boundary
     # condition to the 'Surface', outside boundary condition object to the zone
@@ -1122,7 +1231,7 @@ def building_surface_detailed(idf, surface_name, surface_type,
 
 
 def roof_ceiling(idf, zone_name, space_above_floor,
-                 horizontal_surface_coordinates, ceiling_height, roof_const):
+                 horizontal_surface_coordinates, ceiling_height, roof_const, use):
     '''
     Function which generates roof/ceiling energyplus object
     '''
@@ -1144,11 +1253,16 @@ def roof_ceiling(idf, zone_name, space_above_floor,
         surface_type = 'Ceiling'
         sun_exposure = 'NoSun'
         wind_exposure = 'NoWind'
-        # Set up outside boundary condition to the 'Surface' and outside
-        # boundary condition object to the zone above name appended with
-        # '_Floor' string
-        outside_boundary_condition = 'Surface'
-        outside_boundary_condition_object = space_above_floor + '_Floor'
+        if space_above_floor.lower() == "shading" or use == "shading":
+            # If the space above or the zone itself is shading then use adiabatic ceiling
+            outside_boundary_condition = "Adiabatic"
+            outside_boundary_condition_object = ''
+        else:
+            # Set up outside boundary condition to the 'Surface' and outside
+            # boundary condition object to the zone above name appended with
+            # '_Floor' string
+            outside_boundary_condition = 'Surface'
+            outside_boundary_condition_object = space_above_floor + '_Floor'
     # Append the roof/ceiling horizontal coordinates with the height
     ceiling_coordinates_list = coordinates_add_height(
         ceiling_height, horizontal_surface_coordinates)
