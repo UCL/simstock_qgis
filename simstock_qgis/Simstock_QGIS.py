@@ -37,9 +37,10 @@ import os
 #my imports
 #import venv
 import subprocess
-import pandas as pd
 import platform
 import sys
+#sys.path.insert(0, os.path.dirname(__file__))
+import pandas as pd
 #import multiprocessing as mp
 import qgis.utils
 from qgis.core import Qgis
@@ -192,10 +193,11 @@ class SimstockQGIS:
                 self.initial_tests.append("Chmod command failed on sh script.")
             
             # Call the sh script to bypass all the security warnings that occur when running E+
-            try:
-                subprocess.run(["bash", mac_verify_ep], check=True)
-            except subprocess.CalledProcessError:
-                self.initial_tests.append("Mac verify EnergyPlus sh script failed.")
+            mac_verify_ep_result = subprocess.run(["bash", mac_verify_ep], capture_output=True)
+            if mac_verify_ep_result.returncode != 0:
+                print("Mac verify EnergyPlus sh script failed, but if",
+                      "EnergyPlus runs correctly then this is not a problem.",
+                      "It is possible that the initial setup was already run before.")
             
             # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
             shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
@@ -208,7 +210,10 @@ class SimstockQGIS:
                 self.initial_tests.append("EnergyPlus could not run.")
             
             # Run a test to see if ReadVarsESO works
-            subprocess.run([self.readvarseso], cwd=shoebox_output)
+            try:
+                subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
+            except subprocess.CalledProcessError:
+                self.initial_tests.append("ReadVarsESO failed to run.")
             
             # Test that the QGIS Python works via subprocess
             run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
@@ -736,7 +741,7 @@ class SimstockQGIS:
         # Create new layer in memory for the results
         #TODO: Can CRS be sourced from project somehow?
         crs = self.config["CRS"] #get CRS from config file
-        #crs = "epsg:4326"
+        #crs = "epsg:4326" #or 32718
         mem_layer = QgsVectorLayer("Polygon?crs={}".format(crs), new_layer_name, "memory")
         mem_layer_data = mem_layer.dataProvider()
 
