@@ -15,7 +15,15 @@ pip install geopandas==0.9.0
 ```
 
 ## Mixed-use
-The following objects must exist for mixed-use:
+Mixed-use can be achieved by providing extra columns in the input data.
+* The use columns should be in the format `floor_x_use` where x starts from 1 to match the traditional Simstock floor numbering.
+* If the columns are missing, or the column is present but there is no value, it will default to "Dwell" for the use.
+* If "shading" is stated as a use:
+   * Adiabatic floor and ceiling will be used for that particular zone
+   * Adiabatic floor and/or ceiling will be used for the adjacent surfaces which are touching this "shading" zone
+   * There will be no heating/cooling demand for "shading" zones
+
+For any use that is stated in the columns, corresponding idf objects must exist for each. The following objects must exist for each use:
 * Schedules
     * Occ
     * Heat
