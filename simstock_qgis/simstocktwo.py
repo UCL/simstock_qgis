@@ -60,7 +60,7 @@ def main(idf_dir):
 
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = df.loc[df['shading'] == False]
-        zone_use_dict = {} #mixed-use for plugin
+        zone_use_dict = {} #mixed-use for plugin ###############################
         zones_df.apply(thermal_zones, args=(df, idf, origin, zone_use_dict,), axis=1)
 
         # Extract names of thermal zones:
@@ -76,8 +76,10 @@ def main(idf_dir):
         #for i, zone in enumerate(zone_names):
         #    exec('objects.Zone_%s_Name = zone' % (i + 1))
         
+        ########################################################################
         # Plugin feature: mixed-use
         mixed_use(idf, zone_use_dict)
+        ########################################################################
 
         # Ideal loads system
         for zone in zone_names:
@@ -106,6 +108,7 @@ def main(idf_dir):
                                 Zone_Air_Node_Name=air_node,
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
 
+            ####################################################################
             # Plugin feature: ventilation rate sourced from attribute table
             # Get specified ventilation rate for current zone
             osgb_from_zone = "_".join(zone.split("_")[:-2])
@@ -122,6 +125,7 @@ def main(idf_dir):
 
             # Add the ventilation idf object
             idf.newidfobject(**zone_ventilation_dict)
+            ####################################################################
         
         #if mode == "single":
         #    idf.saveas(os.path.join(IDF_DIR, '{}.idf'.format(datafilename)))
@@ -782,16 +786,17 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     floors = range(int(row.nofloors))
 
     construction = row.construction
-    #glazing_const = '{}_glazing'.format(construction)
+    glazing_const = '{}_glazing'.format(construction)
 
-    ### Added features for Simstock QGIS plugin
+    ########### Added features for Simstock QGIS plugin ########################
     overhang_depth = row.overhang_depth
     #for i in floors:
     #    print(row["FLOOR_{}: use".format(i)])
 
     # Select constructions
-    glazing_const = "glazing"
+    #glazing_const = "glazing"
     def set_construction(construction, element):
+        # TODO: generalise this
         """
         Returns the relevant name of the building surface depending on the 
         construction name.
@@ -800,11 +805,11 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
         one floor.
         """
         if element == "ground_floor":
-            return "{}_ground_floor".format(construction)
+            return "{}_solid_ground_floor".format(construction)
         if element == "wall":
             return "{}_wall".format(construction)
         if element == "roof":
-            return "{}_roof".format(construction)
+            return "{}_flat_roof".format(construction)
         if element == "ceiling":
             if construction.lower() == "const1":
                 raise RuntimeError("Quincha constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
@@ -814,6 +819,7 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
         if element == "ceiling_inverse":
             return "{}_ceiling_inverse".format(construction)
 
+    ############################################################################
 
     if len(floors) == 1:
         floor_no = int(1)
@@ -1305,6 +1311,7 @@ def external_walls(idf, zone_name, floor_number,
             Height=height)
         return
     
+    ############################################################################
     def overhang(idf, window_name, depth):
         """Adds a shading overhang to window with the specified depth. 
         Used in the Simstock QGIS plugin."""
@@ -1319,6 +1326,7 @@ def external_walls(idf, zone_name, floor_number,
                                 Right_extension_from_WindowDoor_Width=0.0,
                                 Depth=depth)
         return
+    ############################################################################
 
     # surface type
     surface_type = 'Wall'
@@ -1381,8 +1389,10 @@ def external_walls(idf, zone_name, floor_number,
                        building_surface_name, starting_x_coordinate,
                        starting_z_coordinate, win_length, win_height)
 
+                ################################################################
                 # Plugin: add overhang to each window of custom depth
                 overhang(idf, win_surface_name, overhang_depth)
+                ################################################################
     return
 
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1429,6 +1439,7 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
 
 # END OF FUNCTION  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+################################################################################
 # Simstock QGIS plugin
 # This is used as default values to build the per zone ventilation objects
 ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
@@ -1458,6 +1469,7 @@ ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
                     'Maximum_Outdoor_Temperature': 100.0,
                     'Maximum_Outdoor_Temperature_Schedule_Name': '',
                     'Maximum_Wind_Speed': 40.0}
+################################################################################
 
 if __name__ == '__main__':
     main()
