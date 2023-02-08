@@ -123,13 +123,25 @@ def bi_adj(df):
                 print("BI mismatch: ", row['osgb'], row['sa_collinear_touching'], row['adjacent'])
                 #raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
-                
-        modal_bi = gdf.bi.mode().values
-        modal_bi_num = sum(gdf.bi.isin([modal_bi[0]]).values)
-        print("The BI(s) with the most buildings: %s with %s buildings" % (modal_bi, modal_bi_num))
-        return gdf
+
     else:
-        return gdf
+        # If there is only one BI
+        rep_point = polygon_union.representative_point()
+        bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
+        bi_name = bi_name.replace(".", "-")
+        for index, row in gdf.iterrows():
+            gdf.at[index, 'bi'] = bi_name
+            
+    try:
+        non_shading_gdf = gdf[gdf["shading"] == False]["bi"]
+        modal_bi = non_shading_gdf.mode().values
+        modal_bi_num = sum(non_shading_gdf.isin([modal_bi[0]]).values)
+        print("The BI(s) with the most buildings: %s with %s thermally simulated buildings" % (modal_bi, modal_bi_num))
+    except:
+        # Needs testing
+        pass
+
+    return gdf
 
 def pt(printout, pst):
     pft = time()

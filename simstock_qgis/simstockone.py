@@ -84,13 +84,11 @@ def check_for_multipolygon(df):
 
 def bi_adj(df):
     df['sa_polygon'] = df['sa_polygon'].apply(loads)
-    #gdf = gpd.GeoDataFrame(df, geometry='polygon')
-    #polygon_union = gdf.polygon.unary_union
     gdf = df.copy(deep=True) #recoded to avoid using geopandas
     polygon_union = unary_union(gdf.sa_polygon)
 
     if polygon_union.type == "MultiPolygon":
-        for i, bi in enumerate(polygon_union):
+        for bi in polygon_union:
             # Get a unique name for the BI which is based on a point
             # within the BI so that it doesn't change if new areas are lassoed
             rep_point = bi.representative_point()
@@ -99,6 +97,13 @@ def bi_adj(df):
             for index, row in gdf.iterrows():
                 if row['sa_polygon'].within(bi):
                     gdf.at[index, 'bi'] = bi_name
+    else:
+        # If there is only one BI
+        rep_point = polygon_union.representative_point()
+        bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
+        bi_name = bi_name.replace(".", "-")
+        for index, row in gdf.iterrows():
+            gdf.at[index, 'bi'] = bi_name
 
         ### The following part just checks consistency against internal simstock
         ### adjacent polygon calculations. Not necessary but nice to have. Needs
@@ -116,13 +121,17 @@ def bi_adj(df):
         #     if row['sa_collinear_touching'] != row['adjacent']:
         #         raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
-                
-        modal_bi = gdf.bi.mode().values
-        modal_bi_num = sum(gdf.bi.isin([modal_bi[0]]).values)
-        print("The BI(s) with the most buildings: %s with %s buildings" % (modal_bi, modal_bi_num))
-        return gdf
-    else:
-        return gdf
+    
+    try:
+        non_shading_gdf = gdf[gdf["shading"] == False]["bi"]
+        modal_bi = non_shading_gdf.mode().values
+        modal_bi_num = sum(non_shading_gdf.isin([modal_bi[0]]).values)
+        print("The BI(s) with the most buildings: %s with %s thermally simulated buildings" % (modal_bi, modal_bi_num))
+    except:
+        # Needs testing but do not want plugin to fail if it doesn't work
+        pass
+
+    return gdf
 
 def pt(printout, pst):
     pft = time()
