@@ -1,0 +1,12 @@
+Name,Outside_Layer,Layer_2,Layer_3,Layer_4,Layer_5,Layer_6,Layer_7,Layer_8,Layer_9,Layer_10,Notes
+basic_glazing,basic_glazing_material,,,,,,,,,,
+improved_glazing,basic_glazing_material,,,,,,,,,,
+ceiling,CARBSE_Cement/plaster/mortar - cement plaster_0.02,Concrete Reinforced (with 1% steel)_0.15,CARBSE_Cement/plaster/mortar - cement plaster_0.02,,,,,,,,
+ceiling_inverse,CARBSE_Cement/plaster/mortar - cement plaster_0.02,Concrete Reinforced (with 1% steel)_0.15,CARBSE_Cement/plaster/mortar - cement plaster_0.02,,,,,,,,
+partition,CARBSE_Cement/plaster/mortar - cement plaster_0.018,CARBSE_ Brick - burned_0.25,CARBSE_Cement/plaster/mortar - cement plaster_0.012,,,,,,,,
+basic_flat_roof,Concrete Roof_0.2,,,,,,,,,,
+improved_flat_roof,Concrete Roof_0.2,,,,,,,,,,
+basic_wall,CARBSE_ Brick - burned_0.25,,,,,,,,,,
+improved_wall,CARBSE_ Brick - burned_0.25,,,,,,,,,,
+basic_solid_ground_floor,Bitumen felt/sheet_0.008,Cement/plaster/mortar - cement plaster_0.02,Concrete Reinforced (with 1% steel)_0.15,Cement/plaster/mortar - cement screed_0.05,Ceramic/clay tiles - clay tiles_0.02,,,,,,
+improved_solid_ground_floor,Bitumen felt/sheet_0.008,Cement/plaster/mortar - cement plaster_0.02,Concrete Reinforced (with 1% steel)_0.15,Cement/plaster/mortar - cement screed_0.05,Ceramic/clay tiles - clay tiles_0.02,,,,,,

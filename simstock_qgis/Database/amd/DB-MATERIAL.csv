@@ -1,0 +1,13 @@
+MatName,Roughness,Thickness,Conductivity,Density,Specific_Heat,Thermal_Absorptance,Solar_Absorptance,Visible_Absorptance,Notes
+Bitumen felt/sheet_0.008,Rough,0.008,0.23,1100.0,1000.0,0.9,0.87,0.87,
+Cement/plaster/mortar - cement plaster_0.02,Rough,0.02,0.72,1760.0,840.0,0.9,0.6,0.6,
+Concrete Reinforced (with 1% steel)_0.15,Rough,0.15,2.3,2300.0,1000.0,0.9,0.6,0.6,
+Concrete Roof_0.2,Rough,0.2,2.3,2300.0,1000.0,0.9,0.6,0.6,
+Cement/plaster/mortar - cement screed_0.05,Rough,0.05,1.4,2100.0,650.0,0.9,0.6,0.6,
+Ceramic/clay tiles - clay tiles_0.02,Rough,0.02,0.85,1900.0,840.0,0.9,0.6,0.6,
+CARBSE_Ceramic_Tiles_0.02,Rough,0.02,1.6,2700.0,422.22,0.9,0.5,0.5,
+Bitumen/Felt Layers_0.01,Rough,0.01,0.5,1700.0,1000.0,0.9,0.87,0.87,
+CARBSE_Cement/plaster/mortar - cement plaster_0.02,Rough,0.02,1.21,1880.0,515.95,0.9,0.6,0.6,
+CARBSE_Cement/plaster/mortar - cement plaster_0.018,Rough,0.018,1.21,1880.0,515.95,0.9,0.6,0.6,
+CARBSE_ Brick - burned_0.25,Rough,0.25,1.27,2049.0,629.57,0.9,0.6,0.6,
+CARBSE_Cement/plaster/mortar - cement plaster_0.012,Rough,0.012,1.21,1880.0,515.95,0.9,0.6,0.6,
