@@ -1,0 +1,570 @@
+!Multiprofile idf
+!-Generator IDFEditor 1.50
+!-Option SortedOrder UseSpecialFormat
+!-Single profile schedules for single archetype LoD0
+
+!-NOTE: All comments with '!-' are ignored by the IDFEditor and are generated automatically.
+!-      Use '!' comments if they need to be retained when using the IDFEditor.
+
+
+!-   ===========  ALL OBJECTS IN CLASS: VERSION ===========
+
+Version,8.9;
+
+!-   ===========  ALL OBJECTS IN CLASS: SIMULATIONCONTROL ===========
+
+
+SimulationControl,
+    No,                      !- Do Zone Sizing Calculation
+    No,                      !- Do System Sizing Calculation
+    No,                      !- Do Plant Sizing Calculation
+    No,                      !- Run Simulation for Sizing Periods
+    Yes;                     !- Run Simulation for Weather File Run Periods
+
+
+!-   ===========  ALL OBJECTS IN CLASS: BUILDING ===========
+
+Building,
+    building,                !- Name
+    0.0,                     !- North Axis {deg}
+    City,                    !- Terrain
+    0.04,                    !- Loads Convergence Tolerance Value
+    0.4,                     !- Temperature Convergence Tolerance Value {deltaC}
+    FullExterior,            !- Solar Distribution
+    25,                      !- Maximum Number of Warmup Days
+    6;                       !- Minimum Number of Warmup Days
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SHADOWCALCULATION ===========
+
+ShadowCalculation,
+    AverageOverDaysInFrequency,  !- Calculation Method
+    20,                      !- Calculation Frequency
+    15000,                   !- Maximum Figures in Shadow Overlap Calculations
+    SutherlandHodgman,       !- Polygon Clipping Algorithm
+    SimpleSkyDiffuseModeling;!- Sky Diffuse Modeling Algorithm
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SURFACECONVECTIONALGORITHM:INSIDE ===========
+
+SurfaceConvectionAlgorithm:Inside,TARP;
+
+!-   ===========  ALL OBJECTS IN CLASS: SURFACECONVECTIONALGORITHM:OUTSIDE ===========
+
+SurfaceConvectionAlgorithm:Outside,TARP;
+
+!-   ===========  ALL OBJECTS IN CLASS: HEATBALANCEALGORITHM ===========
+
+HeatBalanceAlgorithm,ConductionTransferFunction,200;
+
+!-   ===========  ALL OBJECTS IN CLASS: TIMESTEP ===========
+
+Timestep,6;
+
+!-   ===========  ALL OBJECTS IN CLASS: RUNPERIOD ===========
+
+
+RunPeriod,
+    ,                        !- Name
+    1,                       !- Begin Month
+    1,                       !- Begin Day of Month
+    12,                      !- End Month
+    31,                      !- End Day of Month
+    Monday,                  !- Day of Week for Start Day
+    No,                     !- Use Weather File Holidays and Special Days
+    Yes,                     !- Use Weather File Daylight Saving Period
+    No,                      !- Apply Weekend Holiday Rule
+    Yes,                     !- Use Weather File Rain Indicators
+    Yes,                     !- Use Weather File Snow Indicators
+    1;                       !- Number of Times Runperiod to be Repeated
+	
+RunPeriodControl:SpecialDays, New Years Day, 1 Jan, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Christmas Day, 25 Dec, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Republic Day, 26 Jan, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Holi, 3 March, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Mahivir Jayanti, 29  March, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Independence day, 15 August, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Janmashtmi, 3 Sept, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Muharram, 9 Oct, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Gandhi jayanti, 2 Oct, 1, Holiday;
+
+RunPeriodControl:SpecialDays, Dussehra, 19 Oct, 1, Holiday;
+
+
+SizingPeriod:DesignDay,
+    SummerDesignDay,         !- Name
+    7,                       !- Month
+    15,                      !- Day of Month
+    SummerDesignDay,         !- Day Type
+    38.2,                    !- Maximum Dry-Bulb Temperature {C}
+    8.3,                     !- Daily Dry-Bulb Temperature Range {deltaC}
+    ,                        !- Dry-Bulb Temperature Range Modifier Type
+    ,                        !- Dry-Bulb Temperature Range Modifier Day Schedule Name
+    WetBulb,                 !- Humidity Condition Type
+    26.1,                    !- Wetbulb or DewPoint at Maximum Dry-Bulb {C}
+    ,                        !- Humidity Condition Day Schedule Name
+    ,                        !- Humidity Ratio at Maximum Dry-Bulb {kgWater/kgDryAir}
+    ,                        !- Enthalpy at Maximum Dry-Bulb {J/kg}
+    ,                        !- Daily Wet-Bulb Temperature Range {deltaC}
+    100666,                  !- Barometric Pressure {Pa}
+    0,                       !- Wind Speed {m/s}
+    0,                       !- Wind Direction {deg}
+    No,                      !- Rain Indicator
+    No,                      !- Snow Indicator
+    No,                      !- Daylight Saving Time Indicator
+    ASHRAEClearSky,          !- Solar Model Indicator
+    ,                        !- Beam Solar Day Schedule Name
+    ,                        !- Diffuse Solar Day Schedule Name
+    ,                        !- ASHRAE Clear Sky Optical Depth for Beam Irradiance (taub) {dimensionless}
+    ,                        !- ASHRAE Clear Sky Optical Depth for Diffuse Irradiance (taud) {dimensionless}
+    0.98;                    !- Sky Clearness
+
+SizingPeriod:DesignDay,
+    WinterDesignDay,         !- Name
+    1,                       !- Month
+    15,                      !- Day of Month
+    WinterDesignDay,         !- Day Type
+    11,                      !- Maximum Dry-Bulb Temperature {C}
+    0,                       !- Daily Dry-Bulb Temperature Range {deltaC}
+    ,                        !- Dry-Bulb Temperature Range Modifier Type
+    ,                        !- Dry-Bulb Temperature Range Modifier Day Schedule Name
+    WetBulb,                 !- Humidity Condition Type
+    11,                      !- Wetbulb or DewPoint at Maximum Dry-Bulb {C}
+    ,                        !- Humidity Condition Day Schedule Name
+    ,                        !- Humidity Ratio at Maximum Dry-Bulb {kgWater/kgDryAir}
+    ,                        !- Enthalpy at Maximum Dry-Bulb {J/kg}
+    ,                        !- Daily Wet-Bulb Temperature Range {deltaC}
+    100666,                  !- Barometric Pressure {Pa}
+    7.3,                     !- Wind Speed {m/s}
+    0,                       !- Wind Direction {deg}
+    No,                      !- Rain Indicator
+    No,                      !- Snow Indicator
+    No,                      !- Daylight Saving Time Indicator
+    ,                        !- Solar Model Indicator
+    ,                        !- Beam Solar Day Schedule Name
+    ,                        !- Diffuse Solar Day Schedule Name
+    ,                        !- ASHRAE Clear Sky Optical Depth for Beam Irradiance (taub) {dimensionless}
+    ,                        !- ASHRAE Clear Sky Optical Depth for Diffuse Irradiance (taud) {dimensionless}
+    0;                       !- Sky Clearness
+
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULETYPELIMITS ===========
+
+ScheduleTypeLimits,
+    Any Number;                   ! Not limited
+
+ScheduleTypeLimits,
+    Fraction,                !- Name
+    0,                       !- Lower Limit Value
+    1,                       !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Temperature,             !- Name
+    ,                        !- Lower Limit Value
+    ,                        !- Upper Limit Value
+    Continuous,              !- Numeric Type
+    Dimensionless;           !- Unit Type
+
+ScheduleTypeLimits,
+    Control Type,            !- Name
+    0,                       !- Lower Limit Value
+    4,                       !- Upper Limit Value
+    Discrete;                !- Numeric Type
+
+! off heating day
+
+  Schedule:Day:Hourly,
+    0,                       !- Name
+    Any Number,              !- Schedule Type Limits Name
+    0,                       !- Hour 1
+    0,                       !- Hour 2
+    0,                       !- Hour 3
+    0,                       !- Hour 4
+    0,                       !- Hour 5
+    0,                       !- Hour 6
+    0,                       !- Hour 7
+    0,                       !- Hour 8
+    0,                       !- Hour 9
+    0,                       !- Hour 10
+    0,                       !- Hour 11
+    0,                       !- Hour 12
+    0,                       !- Hour 13
+    0,                       !- Hour 14
+    0,                       !- Hour 15
+    0,                       !- Hour 16
+    0,                       !- Hour 17
+    0,                       !- Hour 18
+    0,                       !- Hour 19
+    0,                       !- Hour 20
+    0,                       !- Hour 21
+    0,                       !- Hour 22
+    0,                       !- Hour 23
+    0;                       !- Hour 24
+
+! off cooling day
+
+  Schedule:Day:Hourly,
+    50,                      !- Name
+    Any Number,              !- Schedule Type Limits Name
+    50,                      !- Hour 1
+    50,                      !- Hour 2
+    50,                      !- Hour 3
+    50,                      !- Hour 4
+    50,                      !- Hour 5
+    50,                      !- Hour 6
+    50,                      !- Hour 7
+    50,                      !- Hour 8
+    50,                      !- Hour 9
+    50,                      !- Hour 10
+    50,                      !- Hour 11
+    50,                      !- Hour 12
+    50,                      !- Hour 13
+    50,                      !- Hour 14
+    50,                      !- Hour 15
+    50,                      !- Hour 16
+    50,                      !- Hour 17
+    50,                      !- Hour 18
+    50,                      !- Hour 19
+    50,                      !- Hour 20
+    50,                      !- Hour 21
+    50,                      !- Hour 22
+    50,                      !- Hour 23
+    50;                      !- Hour 24
+
+! used in seasonal schedules
+
+  Schedule:Day:Hourly,
+    Off,                     !- Name
+    Fraction,                !- Schedule Type Limits Name
+    0,                       !- Hour 1
+    0,                       !- Hour 2
+    0,                       !- Hour 3
+    0,                       !- Hour 4
+    0,                       !- Hour 5
+    0,                       !- Hour 6
+    0,                       !- Hour 7
+    0,                       !- Hour 8
+    0,                       !- Hour 9
+    0,                       !- Hour 10
+    0,                       !- Hour 11
+    0,                       !- Hour 12
+    0,                       !- Hour 13
+    0,                       !- Hour 14
+    0,                       !- Hour 15
+    0,                       !- Hour 16
+    0,                       !- Hour 17
+    0,                       !- Hour 18
+    0,                       !- Hour 19
+    0,                       !- Hour 20
+    0,                       !- Hour 21
+    0,                       !- Hour 22
+    0,                       !- Hour 23
+    0;                       !- Hour 24
+
+  Schedule:Week:Daily,
+    Off,                     !- Name
+    Off,                     !- Sunday Schedule:Day Name
+    Off,                     !- Monday Schedule:Day Name
+    Off,                     !- Tuesday Schedule:Day Name
+    Off,                     !- Wednesday Schedule:Day Name
+    Off,                     !- Thursday Schedule:Day Name
+    Off,                     !- Friday Schedule:Day Name
+    Off,                     !- Saturday Schedule:Day Name
+    Off,                     !- Holiday Schedule:Day Name
+    Off,                     !- SummerDesignDay Schedule:Day Name
+    Off,                     !- WinterDesignDay Schedule:Day Name
+    Off,                     !- CustomDay1 Schedule:Day Name
+    Off;                     !- CustomDay2 Schedule:Day Name
+
+! -------------------- Control type schedules (for heating & cooling) ----------------------
+
+  Schedule:Day:Hourly,
+    Summer Control Type Day Sch,  !- Name
+    Control Type,            !- Schedule Type Limits Name
+    4,                       !- Hour 1
+    4,                       !- Hour 2
+    4,                       !- Hour 3
+    4,                       !- Hour 4
+    4,                       !- Hour 5
+    4,                       !- Hour 6
+    4,                       !- Hour 7
+    4,                       !- Hour 8
+    4,                       !- Hour 9
+    4,                       !- Hour 10
+    4,                       !- Hour 11
+    4,                       !- Hour 12
+    4,                       !- Hour 13
+    4,                       !- Hour 14
+    4,                       !- Hour 15
+    4,                       !- Hour 16
+    4,                       !- Hour 17
+    4,                       !- Hour 18
+    4,                       !- Hour 19
+    4,                       !- Hour 20
+    4,                       !- Hour 21
+    4,                       !- Hour 22
+    4,                       !- Hour 23
+    4;                       !- Hour 24
+
+  Schedule:Day:Hourly,
+    Winter Control Type Day Sch,  !- Name
+    Control Type,            !- Schedule Type Limits Name
+    4,                       !- Hour 1
+    4,                       !- Hour 2
+    4,                       !- Hour 3
+    4,                       !- Hour 4
+    4,                       !- Hour 5
+    4,                       !- Hour 6
+    4,                       !- Hour 7
+    4,                       !- Hour 8
+    4,                       !- Hour 9
+    4,                       !- Hour 10
+    4,                       !- Hour 11
+    4,                       !- Hour 12
+    4,                       !- Hour 13
+    4,                       !- Hour 14
+    4,                       !- Hour 15
+    4,                       !- Hour 16
+    4,                       !- Hour 17
+    4,                       !- Hour 18
+    4,                       !- Hour 19
+    4,                       !- Hour 20
+    4,                       !- Hour 21
+    4,                       !- Hour 22
+    4,                       !- Hour 23
+    4;                       !- Hour 24
+
+  Schedule:Day:Hourly,
+    Summer Control Type Day Sch - cool,  !- Name
+    Control Type,            !- Schedule Type Limits Name
+    2,                       !- Hour 1
+    2,                       !- Hour 2
+    2,                       !- Hour 3
+    2,                       !- Hour 4
+    2,                       !- Hour 5
+    2,                       !- Hour 6
+    2,                       !- Hour 7
+    2,                       !- Hour 8
+    2,                       !- Hour 9
+    2,                       !- Hour 10
+    2,                       !- Hour 11
+    2,                       !- Hour 12
+    2,                       !- Hour 13
+    2,                       !- Hour 14
+    2,                       !- Hour 15
+    2,                       !- Hour 16
+    2,                       !- Hour 17
+    2,                       !- Hour 18
+    2,                       !- Hour 19
+    2,                       !- Hour 20
+    2,                       !- Hour 21
+    2,                       !- Hour 22
+    2,                       !- Hour 23
+    2;                       !- Hour 24
+
+  Schedule:Day:Hourly,
+    Winter Control Type Day Sch - heat,  !- Name
+    Control Type,            !- Schedule Type Limits Name
+    1,                       !- Hour 1
+    1,                       !- Hour 2
+    1,                       !- Hour 3
+    1,                       !- Hour 4
+    1,                       !- Hour 5
+    1,                       !- Hour 6
+    1,                       !- Hour 7
+    1,                       !- Hour 8
+    1,                       !- Hour 9
+    1,                       !- Hour 10
+    1,                       !- Hour 11
+    1,                       !- Hour 12
+    1,                       !- Hour 13
+    1,                       !- Hour 14
+    1,                       !- Hour 15
+    1,                       !- Hour 16
+    1,                       !- Hour 17
+    1,                       !- Hour 18
+    1,                       !- Hour 19
+    1,                       !- Hour 20
+    1,                       !- Hour 21
+    1,                       !- Hour 22
+    1,                       !- Hour 23
+    1;                       !- Hour 24
+
+  Schedule:Week:Daily,
+    Summer Control Type Week Sch,  !- Name
+    Summer Control Type Day Sch,  !- Sunday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Monday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Tuesday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Wednesday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Thursday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Friday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Saturday Schedule:Day Name
+    Summer Control Type Day Sch,  !- Holiday Schedule:Day Name
+    Summer Control Type Day Sch,  !- SummerDesignDay Schedule:Day Name
+    Summer Control Type Day Sch,  !- WinterDesignDay Schedule:Day Name
+    Summer Control Type Day Sch,  !- CustomDay1 Schedule:Day Name
+    Summer Control Type Day Sch;  !- CustomDay2 Schedule:Day Name
+
+  Schedule:Week:Daily,
+    Winter Control Type Week Sch,  !- Name
+    Winter Control Type Day Sch,  !- Sunday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Monday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Tuesday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Wednesday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Thursday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Friday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Saturday Schedule:Day Name
+    Winter Control Type Day Sch,  !- Holiday Schedule:Day Name
+    Winter Control Type Day Sch,  !- SummerDesignDay Schedule:Day Name
+    Winter Control Type Day Sch,  !- WinterDesignDay Schedule:Day Name
+    Winter Control Type Day Sch,  !- CustomDay1 Schedule:Day Name
+    Winter Control Type Day Sch;  !- CustomDay2 Schedule:Day Name
+
+  Schedule:Week:Daily,
+    Summer Control Type Week Sch - cool,  !- Name
+    Summer Control Type Day Sch - cool,  !- Sunday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Monday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Tuesday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Wednesday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Thursday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Friday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Saturday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- Holiday Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- SummerDesignDay Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- WinterDesignDay Schedule:Day Name
+    Summer Control Type Day Sch - cool,  !- CustomDay1 Schedule:Day Name
+    Summer Control Type Day Sch - cool;  !- CustomDay2 Schedule:Day Name
+
+  Schedule:Week:Daily,
+    Winter Control Type Week Sch - heat,  !- Name
+    Winter Control Type Day Sch - heat,  !- Sunday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Monday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Tuesday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Wednesday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Thursday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Friday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Saturday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- Holiday Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- SummerDesignDay Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- WinterDesignDay Schedule:Day Name
+    Winter Control Type Day Sch - heat,  !- CustomDay1 Schedule:Day Name
+    Winter Control Type Day Sch - heat;  !- CustomDay2 Schedule:Day Name
+
+Schedule:Compact,
+    Dwell_Heat_Off,          !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until 24:00,             !- Field 3
+    0;                       !- Field 4
+
+Schedule:Compact,
+    Dwell_Cool_Off,          !- Name
+    Temperature,             !- Schedule Type Limits Name
+    Through: 12/31,          !- Field 1
+    For: AllDays,            !- Field 2
+    Until 24:00,             !- Field 3
+    80;                      !- Field 4
+
+!-   ===========  ALL OBJECTS IN CLASS: SCHEDULE:CONSTANT ===========
+
+Schedule:Constant,Always 4,Control Type,4;
+
+
+!-   ===========  ALL OBJECTS IN CLASS: GLOBALGEOMETRYRULES ===========
+
+GlobalGeometryRules,
+    UpperLeftCorner,         !- Starting Vertex Position
+    Counterclockwise,        !- Vertex Entry Direction
+    Relative;                !- Coordinate System
+
+
+!-   ===========  ALL OBJECTS IN CLASS: ZONEINFILTRATION:DESIGNFLOWRATE ===========
+
+ZoneInfiltration:DesignFlowRate,
+    Commercial Infiltration,     !- Name
+    Commercial,                  !- Zone or ZoneList Name
+    8:00 - 18:00 Mon - Fri,  !- Schedule Name
+    AirChanges/Hour,         !- Design Flow Rate Calculation Method
+    ,                        !- Design Flow Rate {m3/s}
+    ,                        !- Flow per Zone Floor Area {m3/s-m2}
+    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
+    0.63554,                 !- Air Changes per Hour {1/hr}
+    1,                       !- Constant Term Coefficient
+    0,                       !- Temperature Term Coefficient
+    0,                       !- Velocity Term Coefficient
+    0;                       !- Velocity Squared Term Coefficient
+
+
+	
+!-   ===========  ALL OBJECTS IN CLASS: ZONECONTROL:THERMOSTAT ===========
+
+! - Name
+! - Zone name
+! - Control type schedule name
+! - Dual SP control object type
+! - Dual SP control object name
+ZoneControl:Thermostat,
+    Commercial Thermostat,       !- Name
+    Commercial,                  !- Zone or ZoneList Name
+    Always 4,                !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
+    Commercial Dual SP;          !- Control 1 Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: THERMOSTATSETPOINT:DUALSETPOINT ===========
+
+! - Name
+! - Heating setpoint temperature schedule name
+ThermostatSetpoint:DualSetpoint,
+    Commercial Dual SP,          !- Name
+    Commercial_Heat,             !- Heating Setpoint Temperature Schedule Name
+    Commercial_Cool;             !- Cooling Setpoint Temperature Schedule Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLEDICTIONARY ===========
+
+Output:VariableDictionary,IDF;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:TABLE:SUMMARYREPORTS ===========
+
+
+Output:Table:SummaryReports,
+    AllSummary;              !- Report 1 Name
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUTCONTROL:TABLE:STYLE ===========
+
+OutputControl:Table:Style,
+    HTML,                    !- Column Separator
+    None;                    !- Unit Conversion
+
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLE ===========
+
+Output:Variable,*,Zone Ideal Loads Zone Total Heating Energy,Annual;
+Output:Variable,*,Zone Ideal Loads Zone Total Cooling Energy,Annual;
+Output:Variable,*,Zone Lights Electric Energy,Annual;
+Output:Variable,*,Electric Equipment Electric Energy,Annual;
+Output:Variable,*,Zone Operative Temperature,Hourly;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:METER ===========
+
+Output:Meter,Electricity:Zone:*,annual;
+
+!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:DIAGNOSTICS ===========
+
+
+Output:Diagnostics,
+    DoNotMirrorDetachedShading;  !- Key 1
+

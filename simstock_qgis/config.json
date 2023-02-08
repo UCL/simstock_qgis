@@ -1,10 +1,10 @@
 {
     "Low temperature threshold": "18.0",
     "High temperature threshold": "28.0",
-    "CRS": "epsg:32718",
-    "epw": "PER_LMA_Lima-Chavez.Intl.AP.846280_TMYx.2007-2021.epw",
+    "CRS": "epsg:27700",
+    "epw": "testing.epw",
     "Cooling COP": "2.5",
     "Grid factor - kgCO2/kWh": "0.234",
-    "Electricity cost - currency/kWh": "0.15",
-    "Currency": "$"
+    "Electricity cost - currency/kWh": "0.25",
+    "Currency": "£"
 }
