@@ -236,7 +236,7 @@ class SimstockQGIS:
         else:
             self.initial_setup_worked = True
             qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
-            print("Initial setup completed successfully. Please restart QGIS.")
+            print("\nInitial setup completed successfully. Please restart QGIS.")
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -446,6 +446,8 @@ class SimstockQGIS:
                     raise ValueError("Check 'height' value for %s" % dfdict["UID"][y])
                 if dfdict["UID"][y] == "":
                     raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
+
+            # TODO: add check for zero heights
 
             # Check values which are required for only non-shading polygons
             for y, value in enumerate(dfdict["shading"]):
@@ -1025,6 +1027,7 @@ class SimstockQGIS:
         
         def bool_quick_fix(dfs):
             """To delete"""
+            # TODO: work out a permanent fix for this
             try:
                 dfs["DB-Fabric-WINDOWMATERIAL_GLAZING"]["Solar_Diffusing"] = "No"
             except KeyError:
@@ -1057,6 +1060,7 @@ class SimstockQGIS:
 
         # Convert database attribute tables to dataframes
         dfs = attributes_to_dfs(database_layers)
+        # TODO: check for blank, missing, incorrect fields
 
         # This is a temporary quick fix to avoid certain fields being incorrectly
         # identified as bool type meaning that "No" is changed to "0"
