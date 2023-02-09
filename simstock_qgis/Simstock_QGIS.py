@@ -367,7 +367,7 @@ class SimstockQGIS:
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
         self.dlg.pbRunSim.clicked.connect(self.run_plugin)
         #self.dlg.pbOptions.clicked.connect(self.launch_options)
-        self.dlg.pbOptions.clicked.connect(self.test_run)
+        self.dlg.pbOptions.clicked.connect(self.add_fields)
         self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
         
         # Run the dialog event loop
@@ -377,7 +377,7 @@ class SimstockQGIS:
         if result:
             pass #don't do anything if OK was pressed
 
-    def test_run(self):
+    def add_fields(self):
         self.add_new_layer(results_mode=False)
             
     def run_ep(self, idf_path):
@@ -561,15 +561,15 @@ class SimstockQGIS:
 
         def getzones(idf):
             '''Finds thermal zones in idf and outputs numpy array.'''
-            zones = idf.idfobjects['ZONELIST'][0] #get zonenames
-            lst = [""]*len(zones.fieldnames)    #initiate blank list
-            
-            for i, fieldname in enumerate(zones.fieldnames):
-                lst[i]=zones[fieldname]     #extract zonenames from eppy obj
-            
-            lst = np.array(lst)
-            lst = lst[lst!=""]      #strip blank objects out
-            zonelist = lst[2:]      #remove headers
+            # zones = idf.idfobjects['ZONELIST'][0] #get zonenames
+            # lst = [""]*len(zones.fieldnames)    #initiate blank list
+            # 
+            # for i, fieldname in enumerate(zones.fieldnames):
+            #     lst[i]=zones[fieldname]     #extract zonenames from eppy obj
+            # 
+            # lst = np.array(lst)
+            # lst = lst[lst!=""]      #strip blank objects out
+            # zonelist = lst[2:]      #remove headers
             
             # Better approach
             all_zones = np.array([zone.Name for zone in idf.idfobjects["ZONE"]])
@@ -599,6 +599,8 @@ class SimstockQGIS:
             """
             Extracts the results of interest from the individual dfs. Returns 
             a dict where the key is the zone name and the value is the results.
+
+            Needs generalising
             """
 
             def get_result_val(output_name, df):
@@ -607,6 +609,8 @@ class SimstockQGIS:
                 value_col = [col for col in df.columns if output_name in col]
                 if len(value_col) == 0:
                     raise RuntimeError("Cannot find %s value for zone '%s' in results." % (output_name, zone))
+                if len(value_col) > 1:
+                    print("Found two values for %s for zone '%s' in results." % (output_name, zone))
                 series = df[value_col[0]] #should only be one col
                 return series
             
@@ -649,8 +653,12 @@ class SimstockQGIS:
             return extracted_results
 
         def new_attrs_all_floors(max_floors, attr_types, results_mode):
-            """Creates a result field for each result type up to the max
-            number of floors."""
+            """
+            Creates a result field for each result type up to the max
+            number of floors.
+            
+            Needs generalising - specifically using float for all result fields
+            """
             new_attrs = []
 
             if results_mode:
@@ -755,6 +763,7 @@ class SimstockQGIS:
         new_attrs = []
 
         if results_mode:
+            # Needs generalising
             # Extract the results from the csvs by thermal zone
             all_results = make_allresults_dict()
             self.low_temp_threshold = float(self.config["Low temperature threshold"])
