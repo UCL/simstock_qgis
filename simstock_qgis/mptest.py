@@ -27,13 +27,24 @@ class EP_Run():
         system = platform.system().lower()
         if system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
+            self.readvarseso   = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(system))
         
     def run_ep(self, idf_file):
         output_dir = idf_file[:-4]
+        output_path = os.path.join(self.idf_dir, output_dir)
         #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
+
+        # Run the EnergyPlus simulation
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file], cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode == 1:
             raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_file)
+        
+        # Generate the .rvi file
+        with open (os.path.join(output_path, "results-rvi.rvi"), "w") as f:
+            f.write("eplusout.eso\neplusout.csv\n0")
+        
+        # Call ReadVarsESO to produce the results csv
+        subprocess.run([self.readvarseso, "results-rvi.rvi", "unlimited"], cwd=output_path)
         
     def run_ep_multi(self, cores):
         p = mp.Pool(cores)

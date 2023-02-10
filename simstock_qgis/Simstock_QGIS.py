@@ -449,8 +449,6 @@ class SimstockQGIS:
                 if dfdict["UID"][y] == "":
                     raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
 
-            # TODO: add check for zero heights
-
             # Check values which are required for only non-shading polygons
             for y, value in enumerate(dfdict["shading"]):
                 if str(value).lower() == "false":
@@ -485,7 +483,7 @@ class SimstockQGIS:
             # Import and run Simstock
             import simstockone as first
             import simstocktwo as second
-            first.main() #TODO: edit BI function with Ivan's shading buffer solution
+            first.main()
             self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
             second.main(idf_dir = self.idf_dir)
             
@@ -493,16 +491,26 @@ class SimstockQGIS:
             
             ### SIMULATION
             def run_simulation(multiprocessing = True): #TODO: maybe remove old results before simulating
+                """
+                Run E+ simulation, generate .rvi files and run ReadVarsESO
+                Outputs: a list of directories containing the results for each idf.
+                """
                 #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
 
                 # Weather file
                 self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
+
+                idf_result_dirs = []
+                for idf_path in self.idf_files:
+                    idf_result_dirs.append(idf_path[:-4])
                 
                 if not multiprocessing: # Single core
                     print("Running EnergyPlus simulation on a single core...")
                     for i, idf_file in enumerate(self.idf_files):
                         print(f"Starting simulation {i+1} of {len(self.idf_files)}")
                         self.run_ep(idf_file)
+                    generate_rvis(idf_result_dirs)
+                    run_readvarseso(idf_result_dirs)
                 
                 else: # Parallel processing
                     print("Running EnergyPlus simulation on multiple cores...")
@@ -513,18 +521,22 @@ class SimstockQGIS:
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
                     #    f.write(str(out))# + "\n") #for debugging purposes only
                 
-                idf_result_dirs = []
-                for idf_path in self.idf_files:
-                    idf_result_dirs.append(idf_path[:-4])
-
                 #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
                 return idf_result_dirs
             
             def run_readvarseso(idf_result_dirs):
+                """Calls ReadVarsESO after rvi files have been generated to
+                produce the csv result files."""
                 for dir in idf_result_dirs:
                     subprocess.run([self.readvarseso, "results-rvi.rvi", "unlimited"], cwd=dir)
             
             def generate_rvis(idf_result_dirs):
+                """
+                Generates .rvi files within each simulation directory
+                to be used by ReadVarsESO
+
+                TODO: combine with mp function so that only one needs to be changed
+                """
                 for dir in idf_result_dirs:
                     with open (os.path.join(dir, "results-rvi.rvi"), "w") as f:
                         f.write("eplusout.eso\neplusout.csv\n0")
@@ -532,9 +544,8 @@ class SimstockQGIS:
             # Run E+ simulation, generate .rvi files and run ReadVarsESO
             self.idf_files = [file.path for file in os.scandir(self.idf_dir) if file.name[-4:] == ".idf"]
             self.idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
-            generate_rvis(self.idf_result_dirs)
-            run_readvarseso(self.idf_result_dirs)
 
+            # Push the results to a new QGIS layer
             self.add_new_layer(results_mode=True)
             qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
 
