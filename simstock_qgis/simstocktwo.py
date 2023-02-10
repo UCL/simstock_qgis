@@ -7,6 +7,7 @@ from shapely.wkt import loads
 from eppy.modeleditor import IDF, IDDAlreadySetError
 from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
+from shapely.ops import unary_union
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -44,24 +45,24 @@ def main(idf_dir):
     idf = IDF(ep_basic_settings)
 
     # Load input data (preprocessing outputs)
-    df = pd.read_csv(input_data)
+    df = pd.read_csv(input_data, dtype={'construction':str})
     
     # Function which creates the idf(s)
-    def createidfs(df, mode):
+    def createidfs(bi_df, df, mode):
     
         # Move all objects towards origins
-        origin = loads(df['sa_polygon'].iloc[0])
+        origin = loads(bi_df['sa_polygon'].iloc[0])
         origin = list(origin.exterior.coords[0])
         origin.append(0)
 
         # Shading volumes converted to shading objects
-        shading_df = df.loc[df['shading'] == True]
+        shading_df = bi_df.loc[bi_df['shading'] == True]
         shading_df.apply(shading_volumes, args=(df, idf, origin,), axis=1)
 
         # Polygons with zones converted to thermal zones based on floor number
-        zones_df = df.loc[df['shading'] == False]
+        zones_df = bi_df.loc[bi_df['shading'] == False]
         zone_use_dict = {} #mixed-use for plugin ###############################
-        zones_df.apply(thermal_zones, args=(df, idf, origin, zone_use_dict,), axis=1)
+        zones_df.apply(thermal_zones, args=(bi_df, idf, origin, zone_use_dict,), axis=1)
 
         # Extract names of thermal zones:
         zones = idf.idfobjects['ZONE']
@@ -147,18 +148,41 @@ def main(idf_dir):
         
         # Get the data for the BI
         bi_df = df[df['bi'] == bi]
-        #buffer = unary_union(bi_df.geometry]).convex_hull.buffer(50)
 
-        # Get the data for other BIs for shading
-        other_shading_df = df[df['bi'] != bi]
-        other_shading_df['shading'] = True
+        # Get the data for other BIs to use as shading
+        rest  = df[df['bi'] != bi]
 
-        bi_df = pd.concat([bi_df, other_shading_df]) #include other BIs as shading
-        shading_vals = bi_df['shading'].to_numpy()
+        # Shading buffer with specified radius
+        # TODO: move this to config file
+        buffer_radius = 20
+
+        # Buffer the BI geometry to specified radius
+        bi_geom = list(map(loads, bi_df.polygon.to_numpy()))
+        buffer = unary_union(bi_geom).convex_hull.buffer(buffer_radius)
+
+        # Find polygons which are within this buffer and create mask
+        lst = []
+        index = []
+        for row in rest.itertuples():
+            poly = loads(row.sa_polygon)
+            # The following is True if poly intersects buffer and False if not
+            lst.append(poly.intersects(buffer))
+            index.append(row.Index)
+        mask = pd.Series(lst, index=index)
+
+        # Get data for the polygons within the buffer
+        within_buffer = rest.loc[mask].copy()
+
+        # Set them to be shading
+        within_buffer["shading"] = True
+
+        # Include them in the idf for the BI
+        bi_df = pd.concat([bi_df, within_buffer])
         
         # Only create idf if the BI is not entirely composed of shading blocks
+        shading_vals = bi_df['shading'].to_numpy()
         if not shading_vals.all():
-            createidfs(bi_df, "bi")
+            createidfs(bi_df, df, "bi")
         else:
             continue
             
@@ -815,9 +839,9 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
                 raise RuntimeError("Quincha constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
             if construction.lower() == "const3":
                 raise RuntimeError("Timber constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
-            return "{}_ceiling".format(construction)
+            return "ceiling".format(construction)
         if element == "ceiling_inverse":
-            return "{}_ceiling_inverse".format(construction)
+            return "ceiling_inverse".format(construction)
 
     ############################################################################
 
