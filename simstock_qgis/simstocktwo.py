@@ -8,6 +8,7 @@ from eppy.modeleditor import IDF, IDDAlreadySetError
 from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 from shapely.ops import unary_union
+import json
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -152,9 +153,12 @@ def main(idf_dir):
         # Get the data for other BIs to use as shading
         rest  = df[df['bi'] != bi]
 
+        # Load config file
+        with open(os.path.join(ROOT_DIR, "config.json"), "r") as read_file:
+            config = json.load(read_file)
+
         # Shading buffer with specified radius
-        # TODO: move this to config file
-        buffer_radius = 20
+        buffer_radius = float(config["Shading buffer radius - m"])
 
         # Buffer the BI geometry to specified radius
         bi_geom = list(map(loads, bi_df.polygon.to_numpy()))

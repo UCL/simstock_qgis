@@ -1,8 +1,10 @@
 {
+    "CRS": "epsg:27700",
+    "Shading buffer radius - m": "50",
+    "epw": "testing.epw",
+
     "Low temperature threshold": "18.0",
     "High temperature threshold": "28.0",
-    "CRS": "epsg:27700",
-    "epw": "testing.epw",
     "Cooling COP": "2.5",
     "Grid factor - kgCO2/kWh": "0.234",
     "Electricity cost - currency/kWh": "0.25",
