@@ -8,6 +8,7 @@ from eppy.modeleditor import IDF
 from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 import argparse
+import geopandas as gpd
 
 # List of added functionality:
 # - EnergyPlus idd path can be specified
@@ -23,6 +24,7 @@ import argparse
 
 ### SPECIFY PATH TO E+ v8.9 IDD FILE HERE
 iddfile = r'C:\EnergyPlusV8-9-0\Energy+.idd'
+shading_buffer_radius = 20
 
 parser = argparse.ArgumentParser()
 parser.add_argument("datafile", help="provide a pre-processed file")
@@ -35,9 +37,8 @@ EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
 IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
 os.makedirs(IDF_DIR, exist_ok=True)
 ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
-datafile = args.datafile
-datafilename = datafile[:-17]
-input_data = os.path.join(ROOT_DIR, datafile)
+datafile = os.path.abspath(args.datafile)
+datafilename = os.path.basename(datafile)[:-17]
 BI_IDF_DIR = os.path.join(IDF_DIR, '{}_bi_idfs'.format(datafilename))
 
 # Do not place window if the wall width is less than this number
@@ -62,10 +63,10 @@ def main():
     idf = IDF(ep_basic_settings)
 
     # Load input data (preprocessing outputs)
-    df = pd.read_csv(input_data, dtype={'construction':str})
+    df = pd.read_csv(datafile, dtype={'construction':str})
     
     # Function which creates the idf(s)
-    def createidfs(df, mode):
+    def createidfs(df, mode, shading_df = None):
     
         # Move all objects towards origins
         origin = loads(df['sa_polygon'].iloc[0])
@@ -73,9 +74,12 @@ def main():
         origin.append(0)
 
         # Shading volumes converted to shading objects
-        shading_df = df.loc[df['shading'] == True]
-        shading_df.apply(shading_volumes, args=(df, idf, origin,), axis=1)
-
+        shading_data = df.loc[df['shading'] == True]
+        if shading_df is not None:
+            shading_data.apply(shading_volumes, args=(shading_df, idf, origin,), axis=1)
+        else:
+            shading_data.apply(shading_volumes, args=(df, idf, origin,), axis=1)
+            
         # Polygons with zones converted to thermal zones based on floor number
         zones_df = df.loc[df['shading'] == False]
         zone_use_dict = {} #mixed-use
@@ -133,7 +137,7 @@ def main():
 
     # Check whether in built island mode and create idf(s) accordingly
     if args.builtisland:
-        print("Splitting output data into built islands")
+        print("Splitting output data into built islands with shading buffer radius: %sm" % shading_buffer_radius)
         os.makedirs(BI_IDF_DIR, exist_ok=True)
         bi_list = df['bi'].unique().tolist()
         
@@ -145,18 +149,37 @@ def main():
             
             # Get the data for the BI
             bi_df = df[df['bi'] == bi]
-            #buffer = unary_union(bi_df.geometry]).convex_hull.buffer(50)
+            
+            bi_gdf = bi_df.copy(deep = True) #TODO: converting to gdf too messy
+            bi_gdf['sa_polygon'] = bi_gdf['sa_polygon'].apply(loads)
+            bi_gdf = gpd.GeoDataFrame(bi_gdf, geometry="sa_polygon")
+            
+            # Get the data for other BIs to use as shading
+            rest = df[df['bi'] != bi]
+            rest_gdf = rest.copy(deep = True)
+            rest_gdf['sa_polygon'] = rest_gdf['sa_polygon'].apply(loads)
+            rest_gdf = gpd.GeoDataFrame(rest_gdf, geometry="sa_polygon")
+            
+            # Buffer the BI geometry to specified radius for shading
+            dissolved = bi_gdf.dissolve().geometry.convex_hull.buffer(shading_buffer_radius)
 
-            # Get the data for other BIs for shading
-            other_shading_df = df[df['bi'] != bi]
-            other_shading_df['shading'] = True
+            # Find polygons which are within this buffer and create mask
+            mask = rest_gdf.intersects(dissolved[0])
+            
+            # Get data for the polygons within the buffer
+            within_buffer = rest.loc[mask].copy()
 
-            bi_df = pd.concat([bi_df, other_shading_df]) #include other BIs as shading
+            # Set them to be shading
+            within_buffer["shading"] = True
+
+            # Include them in the idf for the BI
+            bi_df = pd.concat([bi_df, within_buffer])
             shading_vals = bi_df['shading'].to_numpy()
             
             # Only create idf if the BI is not entirely composed of shading blocks
+            shading_vals = bi_df['shading'].to_numpy()
             if not shading_vals.all():
-                createidfs(bi_df, "bi")
+                createidfs(bi_df, "bi", shading_df = df)
             else:
                 continue
             
