@@ -30,8 +30,8 @@ def main():
           '- {} start time'.format(os.path.basename(__file__)), flush=True)
 
     # Load the raw data into pandas dataframe
-    datafile = args.datafile
-    df = pd.read_csv(os.path.join(ROOT_DIR, datafile), dtype={'construction':str})
+    datafile = os.path.abspath(args.datafile)
+    df = pd.read_csv(datafile, dtype={'construction':str})
 
     # Check for nested polygons
     df = check_for_multipolygon(df)
@@ -72,8 +72,8 @@ def main():
     newdf = bi_adj(df)
     
     # save preprocessed file
-    outputfilename = datafile[:-4] + "_preprocessed.csv"
-    newdf.to_csv(os.path.join(ROOT_DIR, outputfilename), index=False)
+    outputfilename = os.path.basename(datafile)[:-4] + "_preprocessed.csv"
+    newdf.to_csv(os.path.join(os.path.dirname(datafile), outputfilename), index=False)
 
     pt('##### preprocessing completed in:', start)
 
@@ -95,6 +95,9 @@ def check_for_multipolygon(df):
     return df
     
 def bi_adj(df):
+    # TODO: Buildings connected by only shading blocks are still considered
+    #       to be a single BI. This is probably unnecessary since there will be
+    #       no energy transfer between thermally simulated dwellings.
     df['sa_polygon'] = df['sa_polygon'].apply(loads)
     gdf = gpd.GeoDataFrame(df, geometry='sa_polygon')
     polygon_union = gdf.sa_polygon.unary_union
