@@ -141,6 +141,10 @@ def main():
         os.makedirs(BI_IDF_DIR, exist_ok=True)
         bi_list = df['bi'].unique().tolist()
         
+        # Calculate how many thermally simulated buildings are in each BI and output info as csv
+        bi_bldg_count = df[df["shading"]!=True]["bi"].value_counts()
+        bi_bldg_count.to_csv(os.path.join(BI_IDF_DIR, f"{datafilename}_bi_bldg_count.csv"))
+        
         for bi in bi_list:
             idf = IDF(ep_basic_settings)
             # Change the name field of the building object
