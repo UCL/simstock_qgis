@@ -187,8 +187,13 @@ def main():
         # Change the name field of the building object
         building_object = idf.idfobjects['BUILDING'][0]
         building_object.Name = datafilename
-
-        createidfs(df, "single")
+        
+        # Only create idf if it is not entirely composed of shading blocks
+        shading_vals = df['shading'].to_numpy()
+        if not shading_vals.all():
+            createidfs(df, "single")
+        else:
+            pass
         
     pt('##### idf_geometry created in:', start)
 
