@@ -383,14 +383,17 @@ class SimstockQGIS:
     def run_ep(self, idf_path):
         idf_fname = os.path.basename(idf_path)
         output_dir = idf_fname[:-4]
-        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname], cwd=self.idf_dir, capture_output=True, text=True) #no readvarseso
+        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname],
+                              cwd=self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode != 0:
             raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_fname)
+        
+        # For debugging
         #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-        #    f.write(str(out))# + "\n") #for debugging purposes only
+        #    f.write(str(out))# + "\n")
 
     def run_plugin(self):
-        # Check if initial setup worked
+        # Check if initial setup worked #TODO: remove or change to warning
         if self.initial_setup_worked is not None:
             if not self.initial_setup_worked:
                 raise RuntimeError("Initial setup failed! Cannot run Simstock.")
@@ -403,7 +406,7 @@ class SimstockQGIS:
         self.setup_basic_settings()
         
         if self.simulation_started:
-            print("\nTo re-run the plugin, please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
+            print("\nTo re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
             
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
@@ -469,12 +472,12 @@ class SimstockQGIS:
                     dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
                     print("""Could not find 'use' column(s). Assuming all zones to be 'Dwell'.\n
-                          To add the 'use' columns, fill out the 'nofloors' column and then use 'Add Fields' afterwards.""")
+                          To add the 'use' columns, fill out the 'nofloors' column and then use 
+                          'Add Fields' afterwards.""")
 
+            # Save data as csv for Simstock to read
             data = pd.DataFrame(dfdict)
             data = data.rename(columns={"UID":"osgb"})
-            
-            # Save data as csv for Simstock to read
             data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
             
             
@@ -490,7 +493,7 @@ class SimstockQGIS:
 
             
             ### SIMULATION
-            def run_simulation(multiprocessing = True): #TODO: maybe remove old results before simulating
+            def run_simulation(multiprocessing = True):
                 """
                 Run E+ simulation, generate .rvi files and run ReadVarsESO
                 Outputs: a list of directories containing the results for each idf.
@@ -499,12 +502,18 @@ class SimstockQGIS:
 
                 # Weather file
                 self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
+                if not os.path.exists(self.epw_file):
+                    raise FileNotFoundError(f"Weather epw_file '{self.epw_file}'\nnot found! Check "
+                    "that it exists in the plugin's base directory and that is spelled correctly in "
+                    "the 'config.json' file.")
 
+                # List of output directory names
                 idf_result_dirs = []
                 for idf_path in self.idf_files:
                     idf_result_dirs.append(idf_path[:-4])
                 
-                if not multiprocessing: # Single core
+                # Single core
+                if not multiprocessing:
                     print("Running EnergyPlus simulation on a single core...")
                     for i, idf_file in enumerate(self.idf_files):
                         print(f"Starting simulation {i+1} of {len(self.idf_files)}")
@@ -512,14 +521,17 @@ class SimstockQGIS:
                     generate_rvis(idf_result_dirs)
                     run_readvarseso(idf_result_dirs)
                 
-                else: # Parallel processing
+                # Parallel processing
+                else:
                     print("Running EnergyPlus simulation on multiple cores...")
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
                     out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     if out.returncode != 0:
                         raise RuntimeError(out.stderr)
+                    
+                    # For debugging
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-                    #    f.write(str(out))# + "\n") #for debugging purposes only
+                    #    f.write(str(out))# + "\n")
                 
                 #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
                 return idf_result_dirs
@@ -617,11 +629,18 @@ class SimstockQGIS:
             def get_result_val(output_name, df):
                 """Looks into zone result df for a given output. Returns 
                 the whole series of values."""
+                # Find column(s) containing the specified output name
                 value_col = [col for col in df.columns if output_name in col]
+
+                # Raise error if no column is found
                 if len(value_col) == 0:
                     raise RuntimeError("Cannot find %s value for zone '%s' in results." % (output_name, zone))
+                
+                # If more than one column is found
                 if len(value_col) > 1:
                     print("Found two values for %s for zone '%s' in results." % (output_name, zone))
+                
+                # Return the column of interest
                 series = df[value_col[0]] #should only be one col
                 return series
             
@@ -633,6 +652,7 @@ class SimstockQGIS:
 
             # Loop over each zone's results df
             for zone, df in all_results.items():
+                # Output definition
                 # Get operative temperature and use thresholds to get hours above/below
                 operative_series = get_result_val("Zone Operative Temperature", df)
                 below = operative_series[operative_series < self.low_temp_threshold].count()
@@ -699,7 +719,7 @@ class SimstockQGIS:
 
         def add_results_to_features(fields, results_mode, extracted_results=None):
             """Adds the new attributes to the features and populates their values."""
-            # Loop through each feature
+            # Loop through each feature (polygon)
             for i in range(len(self.features)):
 
                 # Update the feature to gain the new fields object
@@ -782,6 +802,7 @@ class SimstockQGIS:
             currency = self.config["Currency"]
             extracted_results = extract_results(all_results)
 
+            # Output definition
             # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = ["Hours below {}C operative temperature".format(self.low_temp_threshold),
                             "Hours above {}C operative temperature".format(self.high_temp_threshold),

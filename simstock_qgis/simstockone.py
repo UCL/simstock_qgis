@@ -83,6 +83,9 @@ def check_for_multipolygon(df):
     return df
 
 def bi_adj(df):
+    # TODO: Buildings connected by only shading blocks are still considered
+    #       to be a single BI. This is probably unnecessary since there will be
+    #       no energy transfer between thermally simulated dwellings.
     df['sa_polygon'] = df['sa_polygon'].apply(loads)
     gdf = df.copy(deep=True) #recoded to avoid using geopandas
     polygon_union = unary_union(gdf.sa_polygon)
