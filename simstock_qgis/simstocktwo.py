@@ -208,11 +208,13 @@ def mixed_use(idf, zone_use_dict):
             raise ValueError("{} has no value for 'use'.".format(key))
 
     # Create a zonelist for each use
-    use_list = list(set(list(zone_use_dict.values())))
+    use_list = list(zone_use_dict.values())
+    use_list = list(map(str.lower, use_list)) #remove case-sensitivity
+    use_list = list(set(use_list))
     for use in use_list:
         zone_list = list()
         for key, value in zone_use_dict.items():
-            if value == use:
+            if value.lower() == use:
                 zone_list.append(key)
         idf.newidfobject('ZONELIST', Name=use)
         objects = idf.idfobjects['ZONELIST'][-1]
@@ -225,7 +227,7 @@ def mixed_use(idf, zone_use_dict):
                 'ZONECONTROL:THERMOSTAT']:
         objects = idf.idfobjects[obj]
         for item in objects:
-            if item.Zone_or_ZoneList_Name not in use_list:
+            if item.Zone_or_ZoneList_Name.lower() not in use_list:
                 objects_to_delete.append(item)
 
     for item in objects_to_delete:
@@ -828,9 +830,6 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
         """
         Returns the relevant name of the building surface depending on the 
         construction name.
-
-        Raises an error if Quincha or Timber constructions are given more than 
-        one floor.
         """
         if element == "ground_floor":
             return "{}_solid_ground_floor".format(construction)
@@ -839,13 +838,12 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
         if element == "roof":
             return "{}_flat_roof".format(construction)
         if element == "ceiling":
-            if construction.lower() == "const1":
-                raise RuntimeError("Quincha constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
-            if construction.lower() == "const3":
-                raise RuntimeError("Timber constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
-            return "ceiling".format(construction)
+            # Use the following to raise an error if a certain construction cannot have more than one floor
+            #if construction.lower() == "const1":
+            #    raise RuntimeError("Quincha constructions cannot have multiple floors. Check polygon '%s'" % row.osgb)
+            return "ceiling"#.format(construction)
         if element == "ceiling_inverse":
-            return "ceiling_inverse".format(construction)
+            return "ceiling_inverse"#.format(construction)
 
     ############################################################################
 
