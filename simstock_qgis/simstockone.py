@@ -20,7 +20,7 @@ def main():
           '- {} start time'.format(os.path.basename(__file__)), flush=True)
 
     # Load the raw data into pandas dataframe
-    df = pd.read_csv(os.path.join(ROOT_DIR, 'sa_data.csv'))
+    df = pd.read_csv(os.path.join(ROOT_DIR, 'sa_data.csv'), dtype={'construction':str})
 
     # Check for nested polygons
     df = check_for_multipolygon(df)
