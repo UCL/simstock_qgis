@@ -101,6 +101,7 @@ class SimstockQGIS:
         self.initial_setup_worked = None #check if initial setup worked
         self.simulation_started = False #check if the run button was pressed
         self.cwd_set = False #check if the user set the cwd
+        self.added_fields = False #check if Add Fields has already been used
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
@@ -378,7 +379,14 @@ class SimstockQGIS:
             pass #don't do anything if OK was pressed
 
     def add_fields(self):
-        self.add_new_layer(results_mode=False)
+        """Allows results_mode=False to be passed to add_new_layer()."""
+        
+        # Check if Add Fields has already been used
+        if not self.added_fields:
+            self.added_fields = True
+            self.add_new_layer(results_mode=False)
+        else:
+            print("Please reload the plugin if 'Add Fields' needs to be used again.")
             
     def run_ep(self, idf_path):
         idf_fname = os.path.basename(idf_path)
