@@ -20,7 +20,7 @@ class EP_Run():
         #files = os.scandir(self.idf_dir)
         #self.idf_files = [file.name for file in files if file.name[-4:] == ".idf"]
         self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
-        self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df["bi"].unique()]
+        self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
 
         # Load config file
         with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:

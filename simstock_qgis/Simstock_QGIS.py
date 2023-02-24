@@ -563,7 +563,7 @@ class SimstockQGIS:
 
             # Run E+ simulation, generate .rvi files and run ReadVarsESO
             #self.idf_files = [file.path for file in os.scandir(self.idf_dir) if file.name[-4:] == ".idf"]
-            self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df["bi"].unique()]
+            self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
             self.idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
 
             # Push the results to a new QGIS layer
