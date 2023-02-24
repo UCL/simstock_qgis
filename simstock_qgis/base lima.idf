@@ -177,6 +177,7 @@ Schedule:Compact,
 
 Schedule:Constant,Always 4,Control Type,4;
 
+
 !-   ===========  ALL OBJECTS IN CLASS: GLOBALGEOMETRYRULES ===========
 
 
