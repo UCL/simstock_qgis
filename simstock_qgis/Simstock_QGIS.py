@@ -655,9 +655,9 @@ class SimstockQGIS:
             
             # Set up empty dict and get post-processing values
             extracted_results = {}
-            cooling_COP = float(self.config["Cooling COP"])
-            grid_factor = float(self.config["Grid factor - kgCO2/kWh"])
-            elec_cost   = float(self.config["Electricity cost - currency/kWh"])
+            #cooling_COP = float(self.config["Cooling COP"])
+            #grid_factor = float(self.config["Grid factor - kgCO2/kWh"])
+            #elec_cost   = float(self.config["Electricity cost - currency/kWh"])
 
             # Loop over each zone's results df
             for zone, df in all_results.items():
@@ -673,20 +673,25 @@ class SimstockQGIS:
                 # Get hypothetical heating/cooling loads
                 heating_load = get_result_val("Heating", df).sum()
                 cooling_load = get_result_val("Cooling", df).sum()
-                cooling_demand = cooling_load / cooling_COP #apply COP factor
+                #cooling_demand = cooling_load / cooling_COP #apply COP factor
 
-                # Combine to get total electricity demand
-                energy = elec + heating_load + cooling_demand
-                energy = round(energy / (3.6E6), 2) #convert to kWh
+                # Convert to kWh
+                elec = round(elec / (3.6E6), 2)
+                heating_load = round(heating_load / (3.6E6), 2)
+                cooling_load = round(cooling_load / (3.6E6), 2)
 
-                # Apply grid factor to get associated CO2 emissions in kg
-                co2_emissions = round(energy * grid_factor, 2)
+                # # Combine to get total electricity demand
+                # energy = elec + heating_load + cooling_demand
+                # energy = round(energy / (3.6E6), 2) #convert to kWh
 
-                # Apply cost of electricity to get total cost
-                total_cost = round(energy * elec_cost, 2)
+                # # Apply grid factor to get associated CO2 emissions in kg
+                # co2_emissions = round(energy * grid_factor, 2)
+
+                # # Apply cost of electricity to get total cost
+                # total_cost = round(energy * elec_cost, 2)
 
                 # Combine extracted results into list
-                lst = [below, above, energy, co2_emissions, total_cost] #TODO: this needs to be same order as attr_types, change to dict?
+                lst = [below, above, elec, heating_load, cooling_load] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change type from np float to float
                 extracted_results[zone] = lst
 
@@ -808,7 +813,7 @@ class SimstockQGIS:
             all_results = make_allresults_dict()
             self.low_temp_threshold = float(self.config["Low temperature threshold"])
             self.high_temp_threshold = float(self.config["High temperature threshold"])
-            currency = self.config["Currency"]
+            #currency = self.config["Currency"]
             extracted_results = extract_results(all_results)
 
             # Output definition
@@ -816,8 +821,8 @@ class SimstockQGIS:
             attr_types = ["Hours below {}C operative temperature".format(self.low_temp_threshold),
                             "Hours above {}C operative temperature".format(self.high_temp_threshold),
                             "Electricity consumption (kWh/yr)",
-                            "CO2 emissions (kg/yr)",
-                            "Electricity cost ({}/yr)".format(currency)]
+                            "Heating load (kWh/yr)",
+                            "Cooling load (kWh/yr)"]
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
