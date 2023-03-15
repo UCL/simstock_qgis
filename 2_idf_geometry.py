@@ -135,10 +135,24 @@ def main():
         elif mode == "bi":
             idf.saveas(os.path.join(BI_IDF_DIR, '{}.idf'.format(bi)))
 
+
     # Check whether in built island mode and create idf(s) accordingly
     if args.builtisland:
-        print("Splitting output data into built islands with shading buffer radius: %sm" % shading_buffer_radius)
+    
+        # Get shading buffer radius via user input
+        shading_buffer_radius = input("Enter shading buffer radius: ")
+        
+        if shading_buffer_radius != '':
+            shading_buffer_radius = float(shading_buffer_radius)
+            print("Creating separate idfs for each built island with shading buffer radius: %sm" % shading_buffer_radius)
+        else:
+            # If no input given, assume infinite shading buffer radius
+            print("Creating separate idfs for each built island with all other buildings included as shading.")
+
+        # Create BI directory
         os.makedirs(BI_IDF_DIR, exist_ok=True)
+        
+        # Get a list of unique BI refs
         bi_list = df['bi'].unique().tolist()
         
         # Calculate how many thermally simulated buildings are in each BI and output info as csv
@@ -163,18 +177,25 @@ def main():
             rest_gdf = rest.copy(deep = True)
             rest_gdf['sa_polygon'] = rest_gdf['sa_polygon'].apply(loads)
             rest_gdf = gpd.GeoDataFrame(rest_gdf, geometry="sa_polygon")
-            
-            # Buffer the BI geometry to specified radius for shading
-            dissolved = bi_gdf.dissolve().geometry.convex_hull.buffer(shading_buffer_radius)
 
-            # Find polygons which are within this buffer and create mask
-            mask = rest_gdf.intersects(dissolved[0])
+            if shading_buffer_radius != '':
             
-            # Get data for the polygons within the buffer
-            within_buffer = rest.loc[mask].copy()
+                # Buffer the BI geometry to specified radius for shading
+                dissolved = bi_gdf.dissolve().geometry.convex_hull.buffer(shading_buffer_radius)
 
-            # Set them to be shading
-            within_buffer["shading"] = True
+                # Find polygons which are within this buffer and create mask
+                mask = rest_gdf.intersects(dissolved[0])
+                
+                # Get data for the polygons within the buffer
+                within_buffer = rest.loc[mask].copy()
+
+                # Set them to be shading
+                within_buffer["shading"] = True
+            
+            else:
+                # All other buildings are to be included as shading
+                within_buffer = rest.copy()
+                within_buffer["shading"] = True
 
             # Include them in the idf for the BI
             bi_df = pd.concat([bi_df, within_buffer])
@@ -186,7 +207,9 @@ def main():
                 createidfs(bi_df, "bi", shading_df = df)
             else:
                 continue
-            
+
+         
+    # Create a single idf containing all polygons        
     else:
         # Change the name field of the building object
         building_object = idf.idfobjects['BUILDING'][0]
