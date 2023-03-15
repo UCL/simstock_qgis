@@ -10,13 +10,14 @@ import argparse
 
 # List of added functionality:
 # - Built islands
-#   - Identifies touching polygons
-#   - Outputs unique BI ref column
+#     - Identifies touching polygons
+#     - Outputs unique BI ref column
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
 tolerance = 0.1  # minimum allowed distance between 2 coordinates [m]
 
+# Input arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("datafile", help="provide a file")
 args = parser.parse_args()

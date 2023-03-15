@@ -17,28 +17,31 @@ import geopandas as gpd
 # - Supports mixed-use with columns in format "floor_x_use" starting from x=1
 #     - IDF objects for specified uses must be present in basic settings
 #     - If use column is missing, or value not provided, defaults to "Dwell"
-# - If "shading" is stated as a use:
-#     - Uses adiabatic floors and ceilings for the block and adjacent surfaces
-#     - There will be no heating/cooling demand from these zones
+#     - If "shading" is stated as a use:
+#          - Uses adiabatic floors and ceilings for the block and adjacent surfaces
+#          - There will be no heating/cooling demand from these zones
 
 
 ### SPECIFY PATH TO E+ v8.9 IDD FILE HERE
 iddfile = r'C:\EnergyPlusV8-9-0\Energy+.idd'
-shading_buffer_radius = 20
 
+# Input arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("datafile", help="provide a pre-processed file")
 parser.add_argument("-b", "--builtisland", action="store_true",
                     help="whether to split built islands or not")
 args = parser.parse_args()
-
-ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
-EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
-IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
-os.makedirs(IDF_DIR, exist_ok=True)
-ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
 datafile = os.path.abspath(args.datafile)
 datafilename = os.path.basename(datafile)[:-17]
+
+# EnergyPlus stuff
+ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
+ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
+
+# Output directories
+IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
+os.makedirs(IDF_DIR, exist_ok=True)
 BI_IDF_DIR = os.path.join(IDF_DIR, '{}_bi_idfs'.format(datafilename))
 
 # Do not place window if the wall width is less than this number
