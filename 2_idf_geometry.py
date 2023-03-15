@@ -1450,7 +1450,7 @@ def external_walls(idf, zone_name, floor_number,
 
 
 def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
-                    ceiling_height, floor_height, partition_const):
+                    ceiling_height, floor_height, partition_const, adiabatic=True):
     '''
     Function which creates partition walls
     '''
@@ -1459,8 +1459,13 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
     sun_exposure = 'NoSun'
     wind_exposure = 'NoWind'
     opposite_zone = adj_osgb
-    outside_boundary_condition = 'Adiabatic'
-    obco = ''
+    if adiabatic:
+        outside_boundary_condition = 'Adiabatic'
+        obco = ''
+    elif not adiabatic:
+        outside_boundary_condition = 'Surface'
+        obco = opposite_zone + '_Part_' + zone_name + '_' + wcc
+
     # Append the vertical surface coordinates with the ceiling and floor height
     ceiling_coordinates = coordinates_add_height(ceiling_height,
                                                  vertical_surface_coordinates)
