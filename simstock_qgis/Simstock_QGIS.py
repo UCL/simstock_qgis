@@ -1024,7 +1024,7 @@ class SimstockQGIS:
                     label = row.index[i]
 
                     # Only add the field if it has content and is not notes
-                    if not content == qgis_null and not label == 'Notes': #using qgis nulltype instead of pd here
+                    if not content == qgis_null and not content == "" and not label == 'Notes': #using qgis nulltype instead of pd here
 
                         # Next check avoids QGIS bug where it appends "_1" to numbered fields
                         # when importing csv (e.g. "Field_1" becomes "Field_1_1")
