@@ -9,6 +9,7 @@ from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 import argparse
 import geopandas as gpd
+from eppy.bunch_subclass import BadEPFieldError
 
 # List of added functionality:
 # - EnergyPlus idd path can be specified
@@ -22,8 +23,13 @@ import geopandas as gpd
 #          - There will be no heating/cooling demand from these zones
 
 
-### SPECIFY PATH TO E+ v8.9 IDD FILE HERE
+### SPECIFY PATH TO ENERGYPLUS IDD FILE HERE
 iddfile = r'C:\EnergyPlusV8-9-0\Energy+.idd'
+#iddfile = r'C:\EnergyPlusV22-2-0\Energy+.idd'
+
+### NAME OF THE BASIC SETTINGS FILE (DEPENDING ON E+ VERSION)
+ep_basic_settings = 'basic_settings.idf'
+#ep_basic_settings = 'basic_settings_V22-2-0.idf'
 
 # Input arguments
 parser = argparse.ArgumentParser()
@@ -37,7 +43,7 @@ datafilename = os.path.basename(datafile)[:-17]
 # EnergyPlus stuff
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 EP_DIR = os.path.join(ROOT_DIR, 'EnergyPlus')
-ep_basic_settings = os.path.join(ROOT_DIR, 'basic_settings.idf')
+ep_basic_settings = os.path.join(ROOT_DIR, ep_basic_settings)
 
 # Output directories
 IDF_DIR = os.path.join(ROOT_DIR, 'idf_files')
@@ -64,6 +70,7 @@ def main():
     #    iddfile = os.path.join(EP_DIR, 'ep8.9_{}/Energy+.idd'.format(system))
     IDF.setiddname(iddfile)
     idf = IDF(ep_basic_settings)
+    #ep_version = idf.idfobjects["VERSION"][0].obj[1]
 
     # Load input data (preprocessing outputs)
     df = pd.read_csv(datafile, dtype={'construction':str})
@@ -257,8 +264,14 @@ def mixed_use(idf, zone_use_dict):
                 'ZoneVentilation:DesignFlowRate']:
         objects = idf.idfobjects[obj]
         for item in objects:
-            if item.Zone_or_ZoneList_Name.lower() not in use_list:
-                objects_to_delete.append(item)
+            try:
+                if item.Zone_or_ZoneList_Name.lower() not in use_list:
+                    objects_to_delete.append(item)
+
+            # Newer versions of E+ use this alternate attribute for some but not all objects
+            except BadEPFieldError:
+                if item.Zone_or_ZoneList_or_Space_or_SpaceList_Name.lower() not in use_list:
+                    objects_to_delete.append(item)
 
     for item in objects_to_delete:
         idf.removeidfobject(item)
