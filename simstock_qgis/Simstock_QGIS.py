@@ -453,12 +453,18 @@ class SimstockQGIS:
             for y, value in enumerate(dfdict["shading"]):
                 if isinstance(value, str) and value.lower() not in ["false", "true"]:
                     raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Received: '%s' for %s." % (value, dfdict["UID"][y]))
+                if isinstance(value, QVariant):
+                    raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Check value for %s." % dfdict["UID"][y])
                 if isinstance(dfdict["height"][y], QVariant):
                     raise ValueError("Check 'height' value for %s." % dfdict["UID"][y])
                 if dfdict["height"][y] == 0:
                     raise ValueError("Height value for %s is zero." % dfdict["UID"][y])
                 if dfdict["UID"][y] == "":
                     raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
+            
+            # TODO: change shading field type to bool?
+            if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0] == "true":
+                raise ValueError("Polygons cannot all be shading! Ensure that some are set to 'false'.")
 
             # Check values which are required for only non-shading polygons
             for y, value in enumerate(dfdict["shading"]):
@@ -471,6 +477,8 @@ class SimstockQGIS:
                         raise ValueError("Check 'ventilation_rate' value for %s" % dfdict["UID"][y])
                     if isinstance(dfdict["nofloors"][y], QVariant):
                         raise ValueError("Check 'nofloors' value for %s" % dfdict["UID"][y])
+                    if dfdict["nofloors"][y] == 0:
+                        raise ValueError("Polygon %s has zero value for 'nofloors'." % dfdict["UID"][y])
             
             # Extract floor-specific attributes
             max_floors = max(dfdict["nofloors"])
