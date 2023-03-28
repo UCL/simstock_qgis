@@ -37,6 +37,9 @@ def main():
     # Check for nested polygons
     df = check_for_multipolygon(df)
     
+    # Check for duplicates
+    check_for_duplicates(df)
+    
     # Test polygons for validity and coordinates direction
     df['sa_reverse_coordinates'] = False
     df = polygon_testing(df)
@@ -94,6 +97,25 @@ def check_for_multipolygon(df):
             else:
                 raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
     return df
+    
+def check_for_duplicates(df):
+    """
+    Checks for any duplicate polygons before the pre-processing happens. Raises
+    an error if any are found.
+    
+    If these are not removed, the associated issues will only arise during the 
+    EnergyPlus simulation, when it will complain of duplicate surfaces.
+    """
+    polygons = df["polygon"].apply(loads)
+    unique_polys = []
+    
+    for poly in polygons:
+        if not any(p.equals(poly) for p in unique_polys):
+            unique_polys.append(poly)
+    no_duplicates = len(polygons) - len(unique_polys)
+
+    if no_duplicates > 0:
+        raise Exception(f"{no_duplicates} duplicate polygons detected!")
     
 def bi_adj(df):
     # TODO: Buildings connected by only shading blocks are still considered
