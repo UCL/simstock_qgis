@@ -371,7 +371,7 @@ def surface_coordinates(polygon, origin):
     # or 'LineString' than take their coordinates and append the coordinates
     # list
     if polygon.geom_type in ['MultiLineString', 'GeometryCollection']:
-        for item in polygon:
+        for item in polygon.geoms:
             if not item.geom_type == 'Point':
                 coordinates_list.append(item.coords)
     elif polygon.geom_type == 'LineString':

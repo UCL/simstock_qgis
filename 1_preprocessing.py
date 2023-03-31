@@ -118,15 +118,17 @@ def check_for_duplicates(df):
         raise Exception(f"{no_duplicates} duplicate polygons detected!")
     
 def bi_adj(df):
-    # TODO: Buildings connected by only shading blocks are still considered
-    #       to be a single BI. This is probably unnecessary since there will be
-    #       no energy transfer between thermally simulated dwellings.
+    # TODO:
+    #   - Buildings connected by only shading blocks are still considered
+    #     to be a single BI. This is probably unnecessary since there will be
+    #     no energy transfer between thermally simulated dwellings.
+    #   - Re-write functions with itertuples instead of iterrows
     df['sa_polygon'] = df['sa_polygon'].apply(loads)
     gdf = gpd.GeoDataFrame(df, geometry='sa_polygon')
     polygon_union = gdf.sa_polygon.unary_union
 
-    if polygon_union.type == "MultiPolygon":
-        for i, bi in enumerate(polygon_union):
+    if polygon_union.geom_type == "MultiPolygon":
+        for bi in polygon_union.geoms:
             # Get a unique name for the BI which is based on a point
             # within the BI so that it doesn't change if new areas are lassoed
             rep_point = bi.representative_point()
@@ -140,7 +142,7 @@ def bi_adj(df):
             touching = gdf[gdf.sa_polygon.touches(row['sa_polygon'])]
             adj_checked = []
             for i, building in touching.iterrows():
-                    if row['sa_polygon'].intersection(building['sa_polygon']).type in ["LineString", "MultiLineString"]:
+                    if row['sa_polygon'].intersection(building['sa_polygon']).geom_type in ["LineString", "MultiLineString"]:
                         adj_checked.append(building['osgb'])
             gdf.at[index, "adjacent"] = str(adj_checked)
             
@@ -717,7 +719,7 @@ def collinear_exterior(df):
         coll_list = list()
         if objects_list.geom_type in ['MultiLineString',
                                       'GeometryCollection']:
-            for item in objects_list:
+            for item in objects_list.geoms:
                 coll_points = coollinear_points(list(item.coords))
                 if coll_points:
                     coll_list.append(coll_points)
