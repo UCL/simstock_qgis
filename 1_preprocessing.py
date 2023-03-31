@@ -133,9 +133,9 @@ def bi_adj(df):
             rep_point = bi.representative_point()
             bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
             bi_name = bi_name.replace(".", "-") #replace dots with dashes for filename compatibility
-            for index, row in gdf.iterrows():
-                if row['sa_polygon'].within(bi):
-                    gdf.at[index, 'bi'] = bi_name
+            for row in gdf.itertuples():
+                if row.sa_polygon.within(bi):
+                    gdf.at[row.Index, 'bi'] = bi_name
 
         for row in gdf.itertuples():
             touching = gdf[gdf.sa_polygon.touches(row.sa_polygon)]

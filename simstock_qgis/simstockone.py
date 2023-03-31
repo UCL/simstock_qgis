@@ -76,11 +76,11 @@ def check_for_multipolygon(df):
     Hand-drawn polygons can be multipolygons with len 1, i.e. a nested 
     polygon within a multipolygon wrapper. This aims to extract them.
     """
-    for index, row in df.iterrows(): #TODO: re-write with itertuples
+    for row in df.itertuples():
         polygon = loads(row.polygon)
         if isinstance(polygon, MultiPolygon):
             if len(polygon) == 1:
-                df.at[index, 'polygon'] = str(polygon[0])
+                df.at[row.Index, "polygon"] = str(polygon[0])
             else:
                 raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
     return df
@@ -119,16 +119,16 @@ def bi_adj(df):
             rep_point = bi.representative_point()
             bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
             bi_name = bi_name.replace(".", "-") #replace dots with dashes for filename compatibility
-            for index, row in gdf.iterrows():
-                if row['sa_polygon'].within(bi):
-                    gdf.at[index, 'bi'] = bi_name
+            for row in gdf.itertuples():
+                if row.sa_polygon.within(bi):
+                    gdf.at[row.Index, 'bi'] = bi_name
     else:
         # If there is only one BI
         rep_point = polygon_union.representative_point()
         bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
         bi_name = bi_name.replace(".", "-")
-        for index, row in gdf.iterrows():
-            gdf.at[index, 'bi'] = bi_name
+        for row in gdf.itertuples():
+            gdf.at[row.Index, 'bi'] = bi_name
 
         ### The following part just checks consistency against internal simstock
         ### adjacent polygon calculations. Not necessary but nice to have. Needs
