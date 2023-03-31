@@ -1168,3 +1168,11 @@ class SimstockQGIS:
 
         # Save idf
         idf.saveas(os.path.join(self.plugin_dir, 'basic_settings.idf'))
+        
+"""
+# For creating the csvt files:
+lst = ['"String"']*103
+s = ",".join(lst)
+with open("test.csv", 'w') as f:
+    f.write(s)
+"""
