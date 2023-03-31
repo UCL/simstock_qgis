@@ -156,8 +156,8 @@ def bi_adj(df):
         rep_point = polygon_union.representative_point()
         bi_name = "bi_" + str(round(rep_point.x, 2)) + "_" + str(round(rep_point.y, 2))
         bi_name = bi_name.replace(".", "-")
-        for index, row in gdf.iterrows():
-            gdf.at[index, 'bi'] = bi_name
+        for row in gdf.itertuples():
+            gdf.at[row.Index, 'bi'] = bi_name
             
     try:
         non_shading_gdf = gdf[gdf["shading"] == False]["bi"]
