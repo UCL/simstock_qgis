@@ -89,11 +89,11 @@ def check_for_multipolygon(df):
     Hand-drawn polygons can be multipolygons with len 1, i.e. a nested 
     polygon within a multipolygon wrapper. This aims to extract them.
     """
-    for index, row in df.iterrows(): #TODO: re-write with itertuples
+    for row in df.itertuples():
         polygon = loads(row.polygon)
         if isinstance(polygon, MultiPolygon):
             if len(polygon) == 1:
-                df.at[index, 'polygon'] = str(polygon[0])
+                df.at[row.Index, "polygon"] = str(polygon[0])
             else:
                 raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
     return df
@@ -122,7 +122,6 @@ def bi_adj(df):
     #   - Buildings connected by only shading blocks are still considered
     #     to be a single BI. This is probably unnecessary since there will be
     #     no energy transfer between thermally simulated dwellings.
-    #   - Re-write functions with itertuples instead of iterrows
     df['sa_polygon'] = df['sa_polygon'].apply(loads)
     gdf = gpd.GeoDataFrame(df, geometry='sa_polygon')
     polygon_union = gdf.sa_polygon.unary_union
@@ -138,17 +137,17 @@ def bi_adj(df):
                 if row['sa_polygon'].within(bi):
                     gdf.at[index, 'bi'] = bi_name
 
-        for index, row in gdf.iterrows():
-            touching = gdf[gdf.sa_polygon.touches(row['sa_polygon'])]
+        for row in gdf.itertuples():
+            touching = gdf[gdf.sa_polygon.touches(row.sa_polygon)]
             adj_checked = []
-            for i, building in touching.iterrows():
-                    if row['sa_polygon'].intersection(building['sa_polygon']).geom_type in ["LineString", "MultiLineString"]:
-                        adj_checked.append(building['osgb'])
-            gdf.at[index, "adjacent"] = str(adj_checked)
+            for building in touching.itertuples():
+                    if row.sa_polygon.intersection(building.sa_polygon).geom_type in ["LineString", "MultiLineString"]:
+                        adj_checked.append(building.osgb)
+            gdf.at[row.Index, "adjacent"] = str(adj_checked)
             
-        for i, row in gdf.iterrows():
-            if row['sa_collinear_touching'] != row['adjacent']:
-                print("BI mismatch: ", row['osgb'], row['sa_collinear_touching'], row['adjacent'])
+        for row in gdf.itertuples():
+            if row.sa_collinear_touching != row.adjacent:
+                print("BI mismatch: ", row.osgb, row.sa_collinear_touching, row.adjacent)
                 #raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
 
