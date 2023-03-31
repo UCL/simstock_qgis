@@ -26,6 +26,7 @@ from eppy.bunch_subclass import BadEPFieldError
 ### SPECIFY PATH TO ENERGYPLUS IDD FILE HERE
 iddfile = r'C:\EnergyPlusV8-9-0\Energy+.idd'
 #iddfile = r'C:\EnergyPlusV22-2-0\Energy+.idd'
+print(f"Using E+ version {os.path.dirname(iddfile)}")
 
 ### NAME OF THE BASIC SETTINGS FILE (DEPENDING ON E+ VERSION)
 ep_basic_settings = 'basic_settings.idf'
