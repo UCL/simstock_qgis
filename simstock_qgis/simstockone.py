@@ -112,8 +112,8 @@ def bi_adj(df):
     gdf = df.copy(deep=True) #recoded to avoid using geopandas
     polygon_union = unary_union(gdf.sa_polygon)
 
-    if polygon_union.type == "MultiPolygon":
-        for bi in polygon_union:
+    if polygon_union.geom_type == "MultiPolygon":
+        for bi in polygon_union.geoms:
             # Get a unique name for the BI which is based on a point
             # within the BI so that it doesn't change if new areas are lassoed
             rep_point = bi.representative_point()
@@ -701,7 +701,7 @@ def collinear_exterior(df):
         coll_list = list()
         if objects_list.geom_type in ['MultiLineString',
                                       'GeometryCollection']:
-            for item in objects_list:
+            for item in objects_list.geoms:
                 coll_points = coollinear_points(list(item.coords))
                 if coll_points:
                     coll_list.append(coll_points)
