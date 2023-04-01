@@ -79,8 +79,8 @@ def check_for_multipolygon(df):
     for row in df.itertuples():
         polygon = loads(row.polygon)
         if isinstance(polygon, MultiPolygon):
-            if len(polygon) == 1:
-                df.at[row.Index, "polygon"] = str(polygon[0])
+            if len(polygon.geoms) == 1:
+                df.at[row.Index, "polygon"] = str(polygon.geoms[0])
             else:
                 raise RuntimeError("Polygon for '%s' is a multipolygon." % row.osgb)
     return df
