@@ -12,6 +12,8 @@ import argparse
 # - Built islands
 #     - Identifies touching polygons
 #     - Outputs unique BI ref column
+# - Extracts polygons which are wrapped in a multipolygon of len 1
+# - Checks for duplicate polygons before pre-processing
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 
