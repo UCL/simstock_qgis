@@ -62,8 +62,6 @@ class SimstockQGIS:
             application at run time.
         :type iface: QgsInterface
         """
-        self.system = platform.system().lower()
-
         # Save reference to the QGIS interface
         self.iface = iface
         self.iface.actionShowPythonDialog().trigger() #show console upon launch
@@ -97,22 +95,8 @@ class SimstockQGIS:
         sys.path.insert(0, self.plugin_dir)
         
         # Update path to packaged eppy
-        eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
-        sys.path.append(eppy_dir)
-
-        # Unzip psutil as per platform
-        psutil_zipfile_win = os.path.join(eppy_dir, "psutil_win-64.zip")
-        psutil_zipfile_osx = os.path.join(eppy_dir, "psutil_osx-64.zip")
-        if self.system == "windows" and platform.machine() == "AMD64":
-            psutil_zipfile = psutil_zipfile_win
-        elif self.system == "darwin" and platform.machine() == "x86_64":
-            psutil_zipfile = psutil_zipfile_osx
-        else:
-            raise NotImplementedError(f"Only Windows and macOS x86-64 are implemented: {self.system}-{platform.machine()}.")
-        with ZipFile(psutil_zipfile, "r") as fp:
-            fp.extractall(eppy_dir)
-        for file in (psutil_zipfile_win, psutil_zipfile_osx):
-            os.remove(file)
+        self.eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
+        sys.path.append(self.eppy_dir)
         
         # Various check trackers
         self.initial_setup_worked = None #check if initial setup worked
@@ -124,6 +108,7 @@ class SimstockQGIS:
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
 
         # Find the computer's operating system and find energyplus version
+        self.system = platform.system().lower()
         if self.system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
             self.readvarseso = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(self.system))
@@ -170,6 +155,21 @@ class SimstockQGIS:
         
         # Set up list to track success of each test
         self.initial_tests = []
+
+        # Unzip psutil as per platform
+        if not os.path.isdir(os.path.join(self.eppy_dir, "psutil")):
+            psutil_zipfile_win = os.path.join(self.eppy_dir, "psutil_win-64.zip")
+            psutil_zipfile_osx = os.path.join(self.eppy_dir, "psutil_osx-64.zip")
+            if self.system == "windows" and platform.machine() == "AMD64":
+                psutil_zipfile = psutil_zipfile_win
+            elif self.system == "darwin" and platform.machine() == "x86_64":
+                psutil_zipfile = psutil_zipfile_osx
+            else:
+                raise NotImplementedError(f"Only Windows and macOS x86-64 are implemented: {self.system}-{platform.machine()}.")
+            with ZipFile(psutil_zipfile, "r") as fp:
+                fp.extractall(self.eppy_dir)
+            for file in (psutil_zipfile_win, psutil_zipfile_osx):
+                os.remove(file)
         
         # Module tests
         print("Pandas version: ", pd.__version__)
@@ -184,6 +184,12 @@ class SimstockQGIS:
             print("Shapely version: ", shapely.__version__)
         except ImportError:
             self.initial_tests.append("Shapely failed to load.")
+            
+        try:
+            import psutil
+            print("Psutil version: ", psutil.__version__)
+        except ImportError:
+            self.initial_tests.append("Psutil failed to load.")
             
         # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
