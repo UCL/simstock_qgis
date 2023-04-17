@@ -7,6 +7,7 @@ import subprocess
 import argparse
 import json
 import pandas as pd
+import psutil as pu
 
 parser = argparse.ArgumentParser()
 parser.add_argument("idf_dir", help="The path to the idf files")
@@ -59,7 +60,7 @@ def main():
 
     idf_dir = args.idf_dir
     runner = EP_Run(idf_dir)
-    cores = mp.cpu_count() - 1 #use one less core than available
+    cores = pu.cpu_count(logical=False) - 1 #use one less core than available
     runner.run_ep_multi(cores)
 
 if __name__ == '__main__':

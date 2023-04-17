@@ -49,6 +49,7 @@ from qgis.core import NULL as qgis_null
 import shutil
 import numpy as np
 import json
+from zipfile import ZipFile
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -61,6 +62,8 @@ class SimstockQGIS:
             application at run time.
         :type iface: QgsInterface
         """
+        self.system = platform.system().lower()
+
         # Save reference to the QGIS interface
         self.iface = iface
         self.iface.actionShowPythonDialog().trigger() #show console upon launch
@@ -97,6 +100,20 @@ class SimstockQGIS:
         eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
         sys.path.append(eppy_dir)
 
+        # Unzip psutil as per platform
+        psutil_zipfile_win = os.path.join(eppy_dir, "psutil_win-64.zip")
+        psutil_zipfile_osx = os.path.join(eppy_dir, "psutil_osx-64.zip")
+        if self.system == "windows" and platform.machine() == "AMD64":
+            psutil_zipfile = psutil_zipfile_win
+        elif self.system == "darwin" and platform.machine() == "x86_64":
+            psutil_zipfile = psutil_zipfile_osx
+        else:
+            raise NotImplementedError(f"Only Windows and macOS x86-64 are implemented: {self.system}-{platform.machine()}.")
+        with ZipFile(psutil_zipfile, "r") as fp:
+            fp.extractall(eppy_dir)
+        for file in (psutil_zipfile_win, psutil_zipfile_osx):
+            os.remove(file)
+        
         # Various check trackers
         self.initial_setup_worked = None #check if initial setup worked
         self.simulation_started = False #check if the run button was pressed
@@ -107,7 +124,6 @@ class SimstockQGIS:
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
 
         # Find the computer's operating system and find energyplus version
-        self.system = platform.system().lower()
         if self.system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
             self.readvarseso = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(self.system))
