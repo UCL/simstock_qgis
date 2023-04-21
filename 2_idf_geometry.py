@@ -1476,6 +1476,8 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
     if adiabatic:
         outside_boundary_condition = 'Adiabatic'
         obco = ''
+        
+    # TODO: does this work for attached shading?
     elif not adiabatic:
         outside_boundary_condition = 'Surface'
         obco = opposite_zone + '_Part_' + zone_name + '_' + wcc
