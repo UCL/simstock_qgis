@@ -165,11 +165,15 @@ class SimstockQGIS:
             elif self.system == "darwin" and platform.machine() == "x86_64":
                 psutil_zipfile = psutil_zipfile_osx
             else:
-                raise NotImplementedError(f"Only Windows and macOS x86-64 are implemented: {self.system}-{platform.machine()}.")
-            with ZipFile(psutil_zipfile, "r") as fp:
-                fp.extractall(self.eppy_dir)
-            for file in (psutil_zipfile_win, psutil_zipfile_osx):
-                os.remove(file)
+                print(f"Only Windows and macOS x86-64 support psutil. System: {self.system}-{platform.machine()}.")
+                psutil_zipfile = None
+            
+            # Only extract if system is supported
+            if psutil_zipfile is not None:
+                with ZipFile(psutil_zipfile, "r") as fp:
+                    fp.extractall(self.eppy_dir)
+                for file in (psutil_zipfile_win, psutil_zipfile_osx):
+                    os.remove(file)
         
         # Module tests
         print("Pandas version: ", pd.__version__)
@@ -188,8 +192,9 @@ class SimstockQGIS:
         try:
             import psutil
             print("Psutil version: ", psutil.__version__)
-        except ImportError:
-            self.initial_tests.append("Psutil failed to load.")
+        except:
+            # Do not fail if psutil is not imported, since it is not essential
+            print("Psutil failed to load.")
             
         # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
