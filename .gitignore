@@ -1,2 +1,4 @@
 EnergyPlus/
 sa_*
+*__pycache__*
+basic_settings.idf
