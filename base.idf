@@ -177,13 +177,6 @@ Schedule:Compact,
 
 Schedule:Constant,Always 4,Control Type,4;
 
-MATERIAL:NOMASS,
-    air_layer,                !- Name
-    Rough,                    !- Roughness
-    0.18,                     !- Thermal Resistance
-    0.9,                      !- Thermal Absorptance
-    0.7,                      !- Solar Absorptance
-    0.7;                      !- Visible Absorptance
 
 !-   ===========  ALL OBJECTS IN CLASS: GLOBALGEOMETRYRULES ===========
 
@@ -225,22 +218,8 @@ ZoneInfiltration:DesignFlowRate,
     0;                       !- Velocity Squared Term Coefficient
 
 ZoneInfiltration:DesignFlowRate,
-    Use3 Infiltration,      !- Name
-    Use3,                   !- Zone or ZoneList Name
-    On 24/7,                 !- Schedule Name
-    AirChanges/Hour,         !- Design Flow Rate Calculation Method
-    ,                        !- Design Flow Rate {m3/s}
-    ,                        !- Flow per Zone Floor Area {m3/s-m2}
-    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
-    0.63554,                 !- Air Changes per Hour {1/hr}
-    1,                       !- Constant Term Coefficient
-    0,                       !- Temperature Term Coefficient
-    0,                       !- Velocity Term Coefficient
-    0;                       !- Velocity Squared Term Coefficient
-
-ZoneInfiltration:DesignFlowRate,
-    Use4 Infiltration,      !- Name
-    Use4,                   !- Zone or ZoneList Name
+    Workshop Infiltration,      !- Name
+    Workshop,                   !- Zone or ZoneList Name
     On 24/7,                 !- Schedule Name
     AirChanges/Hour,         !- Design Flow Rate Calculation Method
     ,                        !- Design Flow Rate {m3/s}
@@ -282,22 +261,11 @@ ZoneControl:Thermostat,
 ! - Dual SP control object type
 ! - Dual SP control object name
 ZoneControl:Thermostat,
-    Use3 Thermostat,        !- Name
-    Use3,                   !- Zone or ZoneList Name
+    Workshop Thermostat,        !- Name
+    Workshop,                   !- Zone or ZoneList Name
     Always 4,                !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
-    Use3 Dual SP;           !- Control 1 Name
-
-! - Zone name
-! - Control type schedule name
-! - Dual SP control object type
-! - Dual SP control object name
-ZoneControl:Thermostat,
-    Use4 Thermostat,        !- Name
-    Use4,                   !- Zone or ZoneList Name
-    Always 4,                !- Control Type Schedule Name
-    ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
-    Use4 Dual SP;           !- Control 1 Name
+    Workshop Dual SP;           !- Control 1 Name
 
 
 !-   ===========  ALL OBJECTS IN CLASS: THERMOSTATSETPOINT:DUALSETPOINT ===========
@@ -319,17 +287,9 @@ ThermostatSetpoint:DualSetpoint,
 ! - Name
 ! - Heating setpoint temperature schedule name
 ThermostatSetpoint:DualSetpoint,
-    Use3 Dual SP,           !- Name
-    Use3_Heat,              !- Heating Setpoint Temperature Schedule Name
-    Use3_Cool;              !- Cooling Setpoint Temperature Schedule Name
-
-! - Name
-! - Heating setpoint temperature schedule name
-ThermostatSetpoint:DualSetpoint,
-    Use4 Dual SP,           !- Name
-    Use4_Heat,              !- Heating Setpoint Temperature Schedule Name
-    Use4_Cool;              !- Cooling Setpoint Temperature Schedule Name
-
+    Workshop Dual SP,           !- Name
+    Workshop_Heat,              !- Heating Setpoint Temperature Schedule Name
+    Workshop_Cool;              !- Cooling Setpoint Temperature Schedule Name
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUT:VARIABLEDICTIONARY ===========
 
