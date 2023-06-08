@@ -45,7 +45,7 @@ import pandas as pd
 import qgis.utils
 from qgis.core import Qgis
 from qgis.core import NULL as qgis_null
-#import time
+import time
 import shutil
 import numpy as np
 import json
@@ -568,9 +568,11 @@ class SimstockQGIS:
                 else:
                     print("Running EnergyPlus simulation on multiple cores...")
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
+                    t1 = time.time()
                     out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
                     if out.returncode != 0:
                         raise RuntimeError(out.stderr)
+                    print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
                     
                     # For debugging
                     #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
@@ -699,6 +701,7 @@ class SimstockQGIS:
                 # Output definition
                 # Get operative temperature and use thresholds to get hours above/below
                 operative_series = get_result_val("Zone Operative Temperature", df)
+                # TODO: do less/greater than or equal to, since setpoints are likely to be set to these exact values
                 below = operative_series[operative_series < self.low_temp_threshold].count()
                 above = operative_series[operative_series > self.high_temp_threshold].count()
                 
