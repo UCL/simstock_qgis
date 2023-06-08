@@ -57,7 +57,7 @@ HeatBalanceAlgorithm,ConductionTransferFunction,200;
 
 !-   ===========  ALL OBJECTS IN CLASS: TIMESTEP ===========
 
-Timestep,6;
+Timestep,4;
 
 !-   ===========  ALL OBJECTS IN CLASS: RUNPERIOD ===========
 
