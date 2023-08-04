@@ -194,65 +194,6 @@ GlobalGeometryRules,
     Relative;                !- Coordinate System
 
 
-!-   ===========  ALL OBJECTS IN CLASS: ZONEINFILTRATION:DESIGNFLOWRATE ===========
-
-ZoneInfiltration:DesignFlowRate,
-    Dwell Infiltration,      !- Name
-    Dwell,                   !- Zone or ZoneList Name
-    On 24/7,                 !- Schedule Name
-    AirChanges/Hour,         !- Design Flow Rate Calculation Method
-    ,                        !- Design Flow Rate {m3/s}
-    ,                        !- Flow per Zone Floor Area {m3/s-m2}
-    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
-    0.63554,                 !- Air Changes per Hour {1/hr}
-    1,                       !- Constant Term Coefficient
-    0,                       !- Temperature Term Coefficient
-    0,                       !- Velocity Term Coefficient
-    0;                       !- Velocity Squared Term Coefficient
-
-ZoneInfiltration:DesignFlowRate,
-    Commercial Infiltration,      !- Name
-    Commercial,                   !- Zone or ZoneList Name
-    On 24/7,                 !- Schedule Name
-    AirChanges/Hour,         !- Design Flow Rate Calculation Method
-    ,                        !- Design Flow Rate {m3/s}
-    ,                        !- Flow per Zone Floor Area {m3/s-m2}
-    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
-    0.63554,                 !- Air Changes per Hour {1/hr}
-    1,                       !- Constant Term Coefficient
-    0,                       !- Temperature Term Coefficient
-    0,                       !- Velocity Term Coefficient
-    0;                       !- Velocity Squared Term Coefficient
-
-ZoneInfiltration:DesignFlowRate,
-    Use3 Infiltration,      !- Name
-    Use3,                   !- Zone or ZoneList Name
-    On 24/7,                 !- Schedule Name
-    AirChanges/Hour,         !- Design Flow Rate Calculation Method
-    ,                        !- Design Flow Rate {m3/s}
-    ,                        !- Flow per Zone Floor Area {m3/s-m2}
-    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
-    0.63554,                 !- Air Changes per Hour {1/hr}
-    1,                       !- Constant Term Coefficient
-    0,                       !- Temperature Term Coefficient
-    0,                       !- Velocity Term Coefficient
-    0;                       !- Velocity Squared Term Coefficient
-
-ZoneInfiltration:DesignFlowRate,
-    Use4 Infiltration,      !- Name
-    Use4,                   !- Zone or ZoneList Name
-    On 24/7,                 !- Schedule Name
-    AirChanges/Hour,         !- Design Flow Rate Calculation Method
-    ,                        !- Design Flow Rate {m3/s}
-    ,                        !- Flow per Zone Floor Area {m3/s-m2}
-    ,                        !- Flow per Exterior Surface Area {m3/s-m2}
-    0.63554,                 !- Air Changes per Hour {1/hr}
-    1,                       !- Constant Term Coefficient
-    0,                       !- Temperature Term Coefficient
-    0,                       !- Velocity Term Coefficient
-    0;                       !- Velocity Squared Term Coefficient
-
-
 !-   ===========  ALL OBJECTS IN CLASS: ZONECONTROL:THERMOSTAT ===========
 
 ! - Zone name

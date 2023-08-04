@@ -141,6 +141,7 @@ class SimstockQGIS:
                          "wwr-Double",
                          "nofloors-Int",
                          "construction-String",
+                         "infiltration_rate-Double",
                          "ventilation_rate-Double",
                          "overhang_depth-Double"]
 
@@ -502,6 +503,8 @@ class SimstockQGIS:
                         raise ValueError("Check 'construction' value for %s" % dfdict["UID"][y])
                     if isinstance(dfdict["ventilation_rate"][y], QVariant):
                         raise ValueError("Check 'ventilation_rate' value for %s" % dfdict["UID"][y])
+                    if isinstance(dfdict["infiltration_rate"][y], QVariant):
+                        raise ValueError("Check 'infiltration_rate' value for %s" % dfdict["UID"][y])
                     if isinstance(dfdict["nofloors"][y], QVariant):
                         raise ValueError("Check 'nofloors' value for %s" % dfdict["UID"][y])
                     if dfdict["nofloors"][y] == 0:

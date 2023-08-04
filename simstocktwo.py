@@ -111,13 +111,21 @@ def main(idf_dir):
                                 Zone_Return_Air_Node_or_NodeList_Name=ret_air_node)
 
             ####################################################################
-            # Plugin feature: ventilation rate sourced from attribute table
-            # Get specified ventilation rate for current zone
-            osgb_from_zone = "_".join(zone.split("_")[:-2])
-            ventilation_rate = zones_df[zones_df["osgb"]==osgb_from_zone]["ventilation_rate"].to_numpy()[0]
+            # Plugin feature: fields sourced from attribute table
+            # TODO: streamline this by putting in functions          
 
-            # Get the rest of the default ventilation obj values from dict
+            def get_osgb_value(val_name, zones_df, zone):
+                """Gets the value of a specified attribute for the zone"""
+                osgb_from_zone = "_".join(zone.split("_")[:-2])
+                return zones_df[zones_df["osgb"]==osgb_from_zone][val_name].to_numpy()[0]
+
+            # Get specified inputs for zone
+            ventilation_rate = get_osgb_value("ventilation_rate", zones_df, zone)
+            infiltration_rate = get_osgb_value("infiltration_rate", zones_df, zone)
+
+            # Get the rest of the default obj values from dict
             zone_ventilation_dict = ventilation_dict
+            zone_infiltration_dict = infiltration_dict
 
             # Set the name, zone name and ventilation rate
             zone_ventilation_dict["Name"] = zone + "_ventilation"
@@ -125,8 +133,14 @@ def main(idf_dir):
             zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
             zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
 
+            # Same for infiltration
+            zone_infiltration_dict["Name"] = zone + "_infiltration"
+            zone_infiltration_dict["Zone_or_ZoneList_Name"] = zone
+            zone_infiltration_dict["Air_Changes_per_Hour"] = infiltration_rate
+
             # Add the ventilation idf object
             idf.newidfobject(**zone_ventilation_dict)
+            idf.newidfobject(**zone_infiltration_dict)
             ####################################################################
         
         #if mode == "single":
@@ -1495,6 +1509,20 @@ ventilation_dict = {'key': 'ZoneVentilation:DesignFlowRate',
                     'Maximum_Outdoor_Temperature': 100.0,
                     'Maximum_Outdoor_Temperature_Schedule_Name': '',
                     'Maximum_Wind_Speed': 40.0}
+
+infiltration_dict = {'key': 'ZoneInfiltration:DesignFlowRate',
+                     'Name': '',
+                     'Zone_or_ZoneList_Name': '',
+                     'Schedule_Name': 'On 24/7',
+                     'Design_Flow_Rate_Calculation_Method': 'AirChanges/Hour',
+                     'Design_Flow_Rate': '',
+                     'Flow_per_Zone_Floor_Area': '',
+                     'Flow_per_Exterior_Surface_Area': '',
+                     'Air_Changes_per_Hour': '',
+                     'Constant_Term_Coefficient': 1.0,
+                     'Temperature_Term_Coefficient': 0.0,
+                     'Velocity_Term_Coefficient': 0.0,
+                     'Velocity_Squared_Term_Coefficient': 0.0}
 ################################################################################
 
 if __name__ == '__main__':
