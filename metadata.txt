@@ -1,19 +1,15 @@
-# This file contains metadata for your plugin.
-
-# This file should be included when you package your plugin.# Mandatory items:
-
 [general]
 name=Simstock QGIS
 qgisMinimumVersion=3.0
-description=Feeds QGIS data into Simstock
+description=Creates and simulates EnergyPlus models from polygon data
 version=0.1
 author=UCL
 email=shyam.amrith.14@ucl.ac.uk
 
-about=Takes polygon/shapefile data from QGIS with an appropriately populated attribute table and feeds this into Simstock for idf creation.
+about=Takes polygon/shapefile data from QGIS with an appropriately populated attribute table and feeds this into Simstock for EnergyPlus model idf creation. Simulates these and outputs results as a new layer.
 
-tracker=http://bugs
-repository=http://repo
+tracker=https://github.com/UCL/simstock_qgis/issues
+repository=https://github.com/UCL/simstock_qgis
 # End of mandatory metadata
 
 # Recommended items:
@@ -25,7 +21,7 @@ hasProcessingProvider=no
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=http://homepage
+homepage=https://github.com/UCL/simstock_qgis
 category=Plugins
 icon=icon.png
 # experimental flag
