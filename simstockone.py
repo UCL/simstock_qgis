@@ -147,6 +147,10 @@ def bi_adj(df):
         #         raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
     
+    if len(gdf["bi"]) != len(gdf["bi"].dropna()):
+        raise Exception("Simstock was unable to resolve all built islands. "
+                        "It is likely that intersections are present.")
+
     try:
         non_shading_gdf = gdf[gdf["shading"] == False]["bi"]
         modal_bi = non_shading_gdf.mode().values
