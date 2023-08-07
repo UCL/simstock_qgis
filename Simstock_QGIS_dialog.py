@@ -8,7 +8,7 @@
                              -------------------
         begin                : 2022-05-17
         git sha              : $Format:%H$
-        copyright            : (C) 2022 by UCL
+        copyright            : (C) 2023 by UCL
         email                : shyam.amrith.14@ucl.ac.uk
  ***************************************************************************/
 
