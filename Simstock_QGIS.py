@@ -152,30 +152,50 @@ class SimstockQGIS:
     
     
     def initial_setup(self):
-        print("Initial setup button pressed")
+        # TODO:
+        #   - Print out more useful information in the case that failures occured. This will be 
+        #      useful if users need to report bugs, and can provide the important info for them.
+        #   - Run the EP test for Windows too
+        print("Initial setup starting...")
         
         # Set up list to track success of each test
         self.initial_tests = []
 
+
+        # Unzip EnergyPlus according to platform
+        if not os.path.exists(os.path.dirname(self.energyplusexe)):
+            EP_dir = os.path.dirname(os.path.dirname(self.energyplusexe))
+            EP_zipfile = os.path.join(EP_dir, f"ep8.9_{self.system}.zip")
+
+            print("    Extracting EnergyPlus...")
+            with ZipFile(EP_zipfile, "r") as fp:
+                fp.extractall(EP_dir)
+
+            # Delete all EP zipfiles
+            [os.remove(f) for f in os.scandir(EP_dir) if f.name[-4:]==".zip"]
+
+
         # Unzip psutil as per platform
-        if not os.path.isdir(os.path.join(self.eppy_dir, "psutil")):
-            psutil_zipfile_win = os.path.join(self.eppy_dir, "psutil_win-64.zip")
-            psutil_zipfile_osx = os.path.join(self.eppy_dir, "psutil_osx-64.zip")
+        if not os.path.exists(os.path.join(self.eppy_dir, "psutil")):
             if self.system == "windows" and platform.machine() == "AMD64":
-                psutil_zipfile = psutil_zipfile_win
+                psutil_zipfile = os.path.join(self.eppy_dir, "psutil_win-64.zip")
             elif self.system == "darwin" and platform.machine() == "x86_64":
-                psutil_zipfile = psutil_zipfile_osx
+                psutil_zipfile = os.path.join(self.eppy_dir, "psutil_osx-64.zip")
             else:
-                print(f"Only Windows and macOS x86-64 support psutil. System: {self.system}-{platform.machine()}.")
+                print("Only Windows and macOS x86-64 support psutil. "
+                      f"System: {self.system}-{platform.machine()}.")
                 psutil_zipfile = None
             
             # Only extract if system is supported
             if psutil_zipfile is not None:
+                print("    Extracting psutil...")
                 with ZipFile(psutil_zipfile, "r") as fp:
                     fp.extractall(self.eppy_dir)
-                for file in (psutil_zipfile_win, psutil_zipfile_osx):
-                    os.remove(file)
+
+                # Delete all psutil zipfiles
+                [os.remove(f) for f in os.scandir(self.eppy_dir) if f.name[-4:]==".zip"]
         
+
         # Module tests
         print("Pandas version: ", pd.__version__)
         try:
@@ -265,7 +285,7 @@ class SimstockQGIS:
         else:
             self.initial_setup_worked = True
             qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
-            print("\nInitial setup completed successfully. Please restart QGIS.")
+            print("\nInitial setup completed successfully. Please restart QGIS.\n")
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
