@@ -3,3 +3,4 @@ sa_*
 basic_settings.idf
 EnergyPlus/*/
 eppy-scripts/psutil*/
+Database/*.csv
