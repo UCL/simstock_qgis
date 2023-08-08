@@ -170,13 +170,19 @@ class SimstockQGIS:
             action.setWhatsThis(whats_this)
 
         if add_to_toolbar:
-            # Adds plugin icon to Plugins toolbar
+            # Adds plugin icon to toolbar
             self.iface.addToolBarIcon(action)
 
         if add_to_menu:
+            # Add plugin to plugins dropdown
             self.iface.addPluginToMenu(
                 self.menu,
                 action)
+            
+            # Add plugin to Vector menu
+            #self.iface.addPluginToVectorMenu(
+            #    self.menu,
+            #    action)
 
         self.actions.append(action)
 
@@ -206,7 +212,7 @@ class SimstockQGIS:
 
 
 
-#### CUSTOM CODE ###################################################################################
+##################################### CUSTOM CODE ##################################################
     def custom_initialisation(self):
         ### CUSTOM ADDITIONS
         # Update path to access Simstock scripts
@@ -268,7 +274,7 @@ class SimstockQGIS:
             self.config = json.load(read_file)
         
     
-    
+
     def initial_setup(self):
         # TODO:
         #   - Print out more useful information in the case that failures occured. This will be 
