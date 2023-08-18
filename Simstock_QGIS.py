@@ -265,6 +265,7 @@ class SimstockQGIS:
                          "wwr-Double",
                          "nofloors-Int",
                          "construction-String",
+                         "glazing_const-String",
                          "infiltration_rate-Double",
                          "ventilation_rate-Double",
                          "overhang_depth-Double"]
@@ -892,8 +893,8 @@ class SimstockQGIS:
 
             # Output definition
             # The base names of the results fields to be added (floor number will be appended to these)
-            attr_types = [f"Hours below {self.low_temp_threshold}C operative temperature",
-                          f"Hours above {self.high_temp_threshold}C operative temperature",
+            attr_types = [f"Hours/yr below {self.low_temp_threshold}C operative temperature",
+                          f"Hours/yr above {self.high_temp_threshold}C operative temperature",
                            "Electricity consumption (kWh/yr)",
                            "Heating load (kWh/yr)",
                            "Cooling load (kWh/yr)"]

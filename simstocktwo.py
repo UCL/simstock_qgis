@@ -847,7 +847,7 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     floors = range(int(row.nofloors))
 
     construction = row.construction
-    glazing_const = '{}_glazing'.format(construction)
+    glazing_const = row.glazing_const
 
     ########### Added features for Simstock QGIS plugin ########################
     overhang_depth = row.overhang_depth
