@@ -43,7 +43,7 @@ class SimstockQGISDialog(QtWidgets.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-FORM_CLASS1, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__),'Simstock_QGIS_dialog2.ui'))
+FORM_CLASS1, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__),'simstock_future_dialog.ui'))
 class YourDialog(QtWidgets.QDialog, FORM_CLASS1):
 
     def __init__(self, parent=None):
