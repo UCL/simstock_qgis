@@ -873,7 +873,7 @@ class SimstockQGIS:
         #TODO: Can CRS be sourced from project somehow?
         crs = self.config["CRS"] #get CRS from config file
         #crs = "epsg:4326" #or 32718
-        mem_layer = QgsVectorLayer("Polygon?crs={}".format(crs), new_layer_name, "memory")
+        mem_layer = QgsVectorLayer(f"Polygon?crs={crs}", new_layer_name, "memory")
         mem_layer_data = mem_layer.dataProvider()
 
         # Get attributes and fields from original layer
@@ -892,11 +892,11 @@ class SimstockQGIS:
 
             # Output definition
             # The base names of the results fields to be added (floor number will be appended to these)
-            attr_types = ["Hours below {}C operative temperature".format(self.low_temp_threshold),
-                            "Hours above {}C operative temperature".format(self.high_temp_threshold),
-                            "Electricity consumption (kWh/yr)",
-                            "Heating load (kWh/yr)",
-                            "Cooling load (kWh/yr)"]
+            attr_types = [f"Hours below {self.low_temp_threshold}C operative temperature",
+                          f"Hours above {self.high_temp_threshold}C operative temperature",
+                           "Electricity consumption (kWh/yr)",
+                           "Heating load (kWh/yr)",
+                           "Cooling load (kWh/yr)"]
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
         else:
@@ -905,14 +905,14 @@ class SimstockQGIS:
 
             # Create unique IDs for each feature and ensure they are the same length
             padding = len(str(len(self.features)))
-            self.unique_ids = ["UID{}".format(str(i).zfill(padding)) for i in range(len(self.features))]
+            self.unique_ids = [f"UID{str(i).zfill(padding)}" for i in range(len(self.features))]
             
             # Add fields which are not floor-specific
             #new_attrs = [(QgsField("UID", QVariant.String))]
             for field in self.headings:
                 heading, QVtype = field.split("-")
                 if heading != "polygon":
-                    exec("new_attrs.append(QgsField('%s', QVariant.%s))" % (heading, QVtype), globals(), locals())
+                    exec(f"new_attrs.append(QgsField('{heading}', QVariant.{QVtype}))", globals(), locals())
 
             try:
                 # This will only work the 2nd time when the nofloors field is present
@@ -1186,7 +1186,7 @@ class SimstockQGIS:
         layers = QgsProject.instance().mapLayers()
         database_layers = []
         for _, layer in layers.items():
-            if layer.name()[:len(self.database_tag)] == self.database_tag: 
+            if layer.name()[:len(self.database_tag)] == self.database_tag:
                 database_layers.append(layer)
 
         # Convert database attribute tables to dataframes
@@ -1218,7 +1218,7 @@ class SimstockQGIS:
         self.HeatCool = str(dfs["DB-HeatingCooling-OnOff"].iloc[0,0])
         if not isinstance(self.HeatCool, str):
             print("type ", type(self.HeatCool), self.HeatCool)
-            raise NotImplementedError("self.HeatCool is %s type" % type(self.HeatCool))
+            raise NotImplementedError(f"self.HeatCool is {type(self.HeatCool)} type")
 
         # Choose heating & cooling setpoint schedules according to check
         if self.HeatCool.lower() == "false":
