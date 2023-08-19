@@ -273,8 +273,36 @@ class SimstockQGIS:
         # Load config file
         with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
             self.config = json.load(read_file)
+
+
+
+    def run(self):
+        """Run method that performs all the real work"""
+
+        # Create the dialog with elements (after translation) and keep reference
+        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+        if self.first_start == True:
+            self.first_start = False
+            self.dlg = SimstockQGISDialog()
+
+        # show the dialog
+        self.dlg.show()
         
-    
+        # Check if the buttons were clicked and run function if so
+        self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
+        self.dlg.pbRunSim.clicked.connect(self.run_plugin)
+        #self.dlg.pbOptions.clicked.connect(self.launch_options)
+        self.dlg.pbOptions.clicked.connect(self.add_fields)
+        self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
+        
+        # Run the dialog event loop
+        result = self.dlg.exec_()
+        
+        # See if OK was pressed
+        if result:
+            pass #don't do anything if OK was pressed
+
+
 
     def initial_setup(self):
         # TODO:
@@ -414,32 +442,6 @@ class SimstockQGIS:
 
 
 
-    def run(self):
-        """Run method that performs all the real work"""
-
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start == True:
-            self.first_start = False
-            self.dlg = SimstockQGISDialog()
-
-        # show the dialog
-        self.dlg.show()
-        
-        # Check if the buttons were clicked and run function if so
-        self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
-        self.dlg.pbRunSim.clicked.connect(self.run_plugin)
-        #self.dlg.pbOptions.clicked.connect(self.launch_options)
-        self.dlg.pbOptions.clicked.connect(self.add_fields)
-        self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
-        
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        
-        # See if OK was pressed
-        if result:
-            pass #don't do anything if OK was pressed
-
     def add_fields(self):
         """Allows results_mode=False to be passed to add_new_layer()."""
         
@@ -450,7 +452,10 @@ class SimstockQGIS:
         else:
             print("Please reload the plugin if 'Add Fields' needs to be used again.")
             
+
+
     def run_ep(self, idf_path):
+        # TODO: move to mptest.py
         idf_fname = os.path.basename(idf_path)
         output_dir = idf_fname[:-4]
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname],
@@ -461,6 +466,8 @@ class SimstockQGIS:
         # For debugging
         #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
         #    f.write(str(out))# + "\n")
+
+
 
     def run_plugin(self):
         # Check if initial setup worked #TODO: remove or change to warning
