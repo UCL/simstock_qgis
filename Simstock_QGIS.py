@@ -314,18 +314,65 @@ class SimstockQGIS:
         # Set up list to track success of each test
         self.initial_tests = []
 
+        # This is to select a different EnergyPlus source
+        # TODO: decide on the best source and delete the other methods
+        ep_source = "download" # "packaged" or "download" or "user"
 
-        # Unzip EnergyPlus according to platform
         if not os.path.exists(os.path.dirname(self.energyplusexe)):
-            EP_dir = os.path.dirname(os.path.dirname(self.energyplusexe))
-            EP_zipfile = os.path.join(EP_dir, f"ep8.9_{self.system}.zip")
+            if ep_source == "packaged":
+                # Unzip EnergyPlus according to platform
+                EP_zipfile = os.path.join(self.EP_DIR, f"ep8.9_{self.system}.zip")
 
-            print("    Extracting EnergyPlus...")
-            with ZipFile(EP_zipfile, "r") as fp:
-                fp.extractall(EP_dir)
+                print("    Extracting EnergyPlus...")
+                with ZipFile(EP_zipfile, "r") as fp:
+                    fp.extractall(self.EP_DIR)
 
-            # Delete all EP zipfiles
-            [os.remove(f) for f in os.scandir(EP_dir) if f.name[-4:]==".zip"]
+                # Delete all EP zipfiles
+                [os.remove(f) for f in os.scandir(self.EP_DIR) if f.name[-4:]==".zip"]
+
+
+            if ep_source == "download":
+                # Download EnergyPlus option
+                import requests
+
+                self.system = "darwin" #debugging
+
+                # TODO: Maybe host our own zip on GitHub, since the Mac EP tarball seems to have an issue
+                if self.system == "windows":
+                    ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Windows-x86_64.zip"
+
+                elif self.system == "darwin":
+                    ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Darwin-x86_64.tar.gz"
+
+                EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
+                if not os.path.exists(EP_zipfile):
+                    # TODO: add a pop-up here to confirm the download to the user
+                    r = requests.get(ep_link, stream=True)
+                    if r.ok:
+                        with open(EP_zipfile, "wb") as f:
+                            for chunk in r.iter_content(chunk_size=1024):
+                                f.write(chunk)
+                
+                if self.system == "windows":
+                    print("    Extracting EnergyPlus...")
+                    with ZipFile(EP_zipfile, "r") as fp:
+                        fp.extractall(self.EP_DIR)
+
+                    ep_files = ["Energy+.idd", "energyplus.exe", "energyplusapi.dll", "ReadVarsESO.exe"]
+                    shutil.move(os.path.join(EP_zipfile[:-4], "EnergyPlus-8-9-0"), os.path.join(self.EP_DIR, f"ep8.9_{self.system}"))
+
+                if self.system == "darwin":
+                    print("    Extracting EnergyPlus...")
+                    import tarfile
+                    with tarfile.open(EP_zipfile, "r:gz") as tar:
+                        tar.extractall(self.EP_DIR)
+
+                    ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib", "libgcc_s.1.dylib",
+                            "libgfortran.3.dylib", "libquadmath.0.dylib", "ReadVarsESO"]
+                    shutil.move(os.path.join(EP_zipfile[:-7], "EnergyPlus-8-9-0"), os.path.join(self.EP_DIR, f"ep8.9_{self.system}"))
+                    
+                
+                
 
 
         # Unzip psutil as per platform
