@@ -42,8 +42,6 @@ class EP_Run():
         self.plugin_dir = os.path.dirname(__file__)
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
         self.idf_dir = idf_dir
-        #files = os.scandir(self.idf_dir)
-        #self.idf_files = [file.name for file in files if file.name[-4:] == ".idf"]
         self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
         self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
 
@@ -61,10 +59,10 @@ class EP_Run():
     def run_ep(self, idf_file):
         output_dir = idf_file[:-4]
         output_path = os.path.join(self.idf_dir, output_dir)
-        #subprocess.run([self.energyplusexe, '-r','-d', output_dir, '-w', self.epw_file, idf_file])
 
         # Run the EnergyPlus simulation
-        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file], cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
+        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file],
+                             cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode == 1:
             raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_file)
         
