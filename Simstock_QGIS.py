@@ -463,18 +463,12 @@ class SimstockQGIS:
                 subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
             except subprocess.CalledProcessError:
                 self.initial_tests.append("ReadVarsESO failed to run.")
-            
-            # Test that the QGIS Python works via subprocess
-            run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
-            if run_python_test.stdout != "success\n":
-                self.initial_tests.append("Python could not be run.")
-            
-        # Windows specific checks
-        if self.system == "windows":
-            # Test that the QGIS Python works via subprocess
-            run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
-            if run_python_test.stdout != "success\n":
-                self.initial_tests.append("Python could not be run.")
+        
+
+        # Test that the QGIS Python works via subprocess
+        run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
+        if run_python_test.stdout != "success\n":
+            self.initial_tests.append("Python could not be run.")
         
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
