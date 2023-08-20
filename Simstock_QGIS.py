@@ -335,7 +335,7 @@ class SimstockQGIS:
                 # Download EnergyPlus option
                 import requests
 
-                self.system = "darwin" #debugging
+                #self.system = "darwin" #debugging
 
                 # TODO: Maybe host our own zip on GitHub, since the Mac EP tarball seems to have an issue
                 if self.system == "windows":
@@ -370,9 +370,16 @@ class SimstockQGIS:
                     ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib", "libgcc_s.1.dylib",
                             "libgfortran.3.dylib", "libquadmath.0.dylib", "ReadVarsESO"]
                     shutil.move(os.path.join(EP_zipfile[:-7], "EnergyPlus-8-9-0"), os.path.join(self.EP_DIR, f"ep8.9_{self.system}"))
-                    
-                
-                
+
+                    # This should conclude the download mode code.
+                    #   aside from adding notice to user
+                    #   and fixing tarball problem (see above todos)
+
+            if ep_source == "user":
+                pass
+                # TODO:
+                #   - Main part is creating user notice to download from link, and provide file path with path selector
+                #   - Can use the same code as download, but without download step
 
 
         # Unzip psutil as per platform
