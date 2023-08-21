@@ -43,12 +43,12 @@ class SimstockQGISDialog(QtWidgets.QDialog, FORM_CLASS):
         # #widgets-and-dialogs-with-auto-connect
         self.setupUi(self)
 
-FORM_CLASS1, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__),'simstock_future_dialog.ui'))
-class YourDialog(QtWidgets.QDialog, FORM_CLASS1):
+FORM_CLASS1, _ = uic.loadUiType(os.path.join(os.path.dirname(__file__),'permission.ui'))
+class PermissionDialog(QtWidgets.QDialog, FORM_CLASS1):
 
     def __init__(self, parent=None):
         """Constructor."""
-        super(YourDialog, self).__init__(parent)
+        super(PermissionDialog, self).__init__(parent)
         # Set up the user interface from Designer.
         # After setupUI you can access any designer object by doing
         # self.<objectname>, and you can use autoconnect slots - see

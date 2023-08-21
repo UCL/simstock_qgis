@@ -344,14 +344,23 @@ class SimstockQGIS:
                 elif self.system == "darwin":
                     ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Darwin-x86_64.tar.gz"
 
-                EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
-                if not os.path.exists(EP_zipfile):
-                    # TODO: add a pop-up here to confirm the download to the user
-                    r = requests.get(ep_link, stream=True)
-                    if r.ok:
-                        with open(EP_zipfile, "wb") as f:
-                            for chunk in r.iter_content(chunk_size=1024):
-                                f.write(chunk)
+                # Get user's permission before downloading EnergyPlus
+                self.ask_permission()
+                if self.permission == "n":
+                    self.initial_tests.append("User permission not granted to download EnergyPlus. Aborted initial setup.")
+                    # TODO: may not be necessary to report failure here, since we may let the user provide the zip manually
+
+                elif self.permission == "y":
+                    print("User permission granted to download EnergyPlus. Proceding with initial setup...")
+
+                    # Download the EnergyPlus zip if permission given
+                    EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
+                    if not os.path.exists(EP_zipfile):
+                        r = requests.get(ep_link, stream=True)
+                        if r.ok:
+                            with open(EP_zipfile, "wb") as f:
+                                for chunk in r.iter_content(chunk_size=1024):
+                                    f.write(chunk)
                 
                 if self.system == "windows":
                     print("    Extracting EnergyPlus...")
@@ -374,6 +383,7 @@ class SimstockQGIS:
                     # This should conclude the download mode code.
                     #   aside from adding notice to user
                     #   and fixing tarball problem (see above todos)
+                    # Note that for both download and user, the files need to be arranged so that the Mac sh script works
 
             if ep_source == "user":
                 pass
@@ -455,7 +465,7 @@ class SimstockQGIS:
                       "EnergyPlus runs correctly then this is not a problem.",
                       "It is possible that the initial setup was already run before.")
             
-            # Run a test to see if E+ works. It is likely the user will need to permit the program in system prefs
+            # Run a test to see if E+ works         # TODO: apply this test to Windows too
             shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
             shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
             if os.path.exists(shoebox_output):
@@ -487,6 +497,25 @@ class SimstockQGIS:
             self.initial_setup_worked = True
             qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
             print("\nInitial setup completed successfully. Please restart QGIS.\n")
+
+
+
+    def ask_permission(self):
+        from .Simstock_QGIS_dialog import PermissionDialog
+        self.dlg2 = PermissionDialog()
+        self.dlg2.permissionBox.accepted.connect(self.permission_yes)
+        self.dlg2.permissionBox.rejected.connect(self.permission_no)
+        self.dlg2.exec_()
+
+
+    def permission_yes(self):
+        self.permission = "y"
+        #self.dlg2.done(0)
+        self.dlg2.close()
+
+    def permission_no(self):
+        self.permission = "n"
+        self.dlg2.close()
 
 
 
@@ -1064,13 +1093,6 @@ class SimstockQGIS:
         
         # Add the database layers
         load_all_layers_from_gpkg(self.gpkg_path, database_layer_names)
-
-
-
-    def launch_options(self):
-        from .Simstock_QGIS_dialog import YourDialog
-        self.dlg2 = YourDialog()
-        self.dlg2.show()
     
 
 
