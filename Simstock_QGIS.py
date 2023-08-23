@@ -309,14 +309,17 @@ class SimstockQGIS:
         #   - Print out more useful information in the case that failures occured. This will be 
         #      useful if users need to report bugs, and can provide the important info for them.
         #   - Run the EP test for Windows too
+        #   - Put into functions, and maybe even separate script
         print("Initial setup starting...")
         
         # Set up list to track success of each test
         self.initial_tests = []
 
+
         # This is to select a different EnergyPlus source
         # TODO: decide on the best source and delete the other methods
         ep_source = "download" # "packaged" or "download" or "user"
+        #self.system = "darwin" #debugging
 
         if not os.path.exists(os.path.dirname(self.energyplusexe)):
             if ep_source == "packaged":
@@ -333,63 +336,96 @@ class SimstockQGIS:
 
             if ep_source == "download":
                 # Download EnergyPlus option
-                import requests
 
-                #self.system = "darwin" #debugging
-
-                # TODO: Maybe host our own zip on GitHub, since the Mac EP tarball seems to have an issue
                 if self.system == "windows":
                     ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Windows-x86_64.zip"
 
                 elif self.system == "darwin":
                     ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Darwin-x86_64.tar.gz"
 
+                EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
+                ep_plat_dir = os.path.join(self.EP_DIR, f'ep8.9_{self.system}')#os.path.dirname(self.energyplusexe) #debugging
+
                 # Get user's permission before downloading EnergyPlus
                 self.ask_permission()
                 if self.permission == "n":
-                    self.initial_tests.append("User permission not granted to download EnergyPlus. Aborted initial setup.")
-                    # TODO: may not be necessary to report failure here, since we may let the user provide the zip manually
+                    print("User permission not granted to download EnergyPlus.")
 
                 elif self.permission == "y":
-                    print("User permission granted to download EnergyPlus. Proceding with initial setup...")
+                    print("User permission granted to download EnergyPlus.")
+                    import requests
 
-                    # Download the EnergyPlus zip if permission given
-                    EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
+                    # Download EnergyPlus if permission given
                     if not os.path.exists(EP_zipfile):
                         r = requests.get(ep_link, stream=True)
                         if r.ok:
+                            print("Downloading EnergyPlus...")
                             with open(EP_zipfile, "wb") as f:
                                 for chunk in r.iter_content(chunk_size=1024):
                                     f.write(chunk)
                 
+
                 if self.system == "windows":
+
+                    # Extract zip archive
                     print("    Extracting EnergyPlus...")
                     with ZipFile(EP_zipfile, "r") as fp:
                         fp.extractall(self.EP_DIR)
 
+                    # Arrange in expected file path structure
+                    shutil.move(os.path.join(EP_zipfile[:-4], "EnergyPlus-8-9-0"), ep_plat_dir)
+                    shutil.rmtree(EP_zipfile[:-4]) #delete empty dir
                     ep_files = ["Energy+.idd", "energyplus.exe", "energyplusapi.dll", "ReadVarsESO.exe"]
-                    shutil.move(os.path.join(EP_zipfile[:-4], "EnergyPlus-8-9-0"), os.path.join(self.EP_DIR, f"ep8.9_{self.system}"))
 
                 if self.system == "darwin":
-                    print("    Extracting EnergyPlus...")
-                    import tarfile
-                    with tarfile.open(EP_zipfile, "r:gz") as tar:
-                        tar.extractall(self.EP_DIR)
 
+                    # Extract tar.gz archive
+                    #import extracttargz
+                    #extracttargz.main()        #this throws an error for some reason
+                    print("    Extracting EnergyPlus...")
+                    subprocess.run([self.qgis_python_location, os.path.join(self.plugin_dir, "extracttargz.py")])
+
+                    # Arrange in expected file path structure
+                    shutil.move(os.path.join(EP_zipfile[:-7], "EnergyPlus-8-9-0"), ep_plat_dir)
+                    shutil.rmtree(EP_zipfile[:-7]) #delete empty dir
                     ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib", "libgcc_s.1.dylib",
                             "libgfortran.3.dylib", "libquadmath.0.dylib", "ReadVarsESO"]
-                    shutil.move(os.path.join(EP_zipfile[:-7], "EnergyPlus-8-9-0"), os.path.join(self.EP_DIR, f"ep8.9_{self.system}"))
+                
 
-                    # This should conclude the download mode code.
-                    #   aside from adding notice to user
-                    #   and fixing tarball problem (see above todos)
-                    # Note that for both download and user, the files need to be arranged so that the Mac sh script works
+                # Check that all required files are present and report status
+                clean_up = True
+                for f in ep_files:
+                    fp = os.path.join(ep_plat_dir, f)
+                    if os.path.exists(fp):
+                        print(f"Located '{f}'")
+                    else:
+                        # Move file if not in expected directory
+                        fp = os.path.join(ep_plat_dir, "PostProcess", f)
+                        if os.path.exists(fp):
+                            print(f"Located '{f}'")
+                            shutil.move(fp, os.path.join(ep_plat_dir, f))
+                        else:
+                            self.initial_tests.append(f"Could not locate '{f}'")
+                            clean_up = False #do not perform clean-up if some files are missing
+
+                # Clean up if all files were located
+                if clean_up:
+                    os.remove(EP_zipfile)
+                    to_delete = ["ExampleFiles", "PreProcess", "Documentation", "DataSets", "PostProcess", "WeatherData"]
+                    for fdir in to_delete:
+                        try:
+                            shutil.rmtree(os.path.join(ep_plat_dir, fdir))
+                        except:
+                            pass
+
+                    # TODO: check for Rosetta
 
             if ep_source == "user":
                 pass
                 # TODO:
                 #   - Main part is creating user notice to download from link, and provide file path with path selector
                 #   - Can use the same code as download, but without download step
+            #raise RuntimeError #debugging
 
 
         # Unzip psutil as per platform
@@ -483,19 +519,25 @@ class SimstockQGIS:
         
 
         # Test that the QGIS Python works via subprocess
-        run_python_test = subprocess.run([self.qgis_python_location, test_python], capture_output=True, text=True)
+        run_python_test = subprocess.run([self.qgis_python_location, test_python],
+                                         capture_output=True, text=True)
         if run_python_test.stdout != "success\n":
             self.initial_tests.append("Python could not be run.")
         
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
-            qgis.utils.iface.messageBar().pushMessage("Initial setup failed", "Some errors have occured - please check the Python console outputs.", level=Qgis.Critical, duration=5)
+            qgis.utils.iface.messageBar().pushMessage("Initial setup failed",
+                                                      "Some errors have occured - please check the Python console outputs.",
+                                                      level=Qgis.Critical,
+                                                      duration=5)
             self.initial_setup_worked = False
             for error in self.initial_tests:
                 print("\n" + error + "\n")
         else:
             self.initial_setup_worked = True
-            qgis.utils.iface.messageBar().pushMessage("Initial setup complete", "Initial setup completed successfully. Please restart QGIS.", level=Qgis.Success)
+            qgis.utils.iface.messageBar().pushMessage("Initial setup complete",
+                                                      "Initial setup completed successfully. Please restart QGIS.",
+                                                      level=Qgis.Success)
             print("\nInitial setup completed successfully. Please restart QGIS.\n")
 
 
