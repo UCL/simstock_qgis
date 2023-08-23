@@ -473,6 +473,7 @@ class SimstockQGIS:
         # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
         
+
         # Mac OS specific checks
         if self.system == "darwin":
             # Make E+ application executable
@@ -500,22 +501,26 @@ class SimstockQGIS:
                 print("Mac verify EnergyPlus sh script failed, but if",
                       "EnergyPlus runs correctly then this is not a problem.",
                       "It is possible that the initial setup was already run before.")
-            
-            # Run a test to see if E+ works         # TODO: apply this test to Windows too
-            shoebox_idf = os.path.join(self.plugin_dir, "shoebox.idf")
-            shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
-            if os.path.exists(shoebox_output):
-                shutil.rmtree(shoebox_output)
-            epw_file = os.path.join(self.plugin_dir, "testing.epw")
-            run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, shoebox_idf])
-            if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
-                self.initial_tests.append("EnergyPlus could not run.")
-            
-            # Run a test to see if ReadVarsESO works
-            try:
-                subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
-            except subprocess.CalledProcessError:
-                self.initial_tests.append("ReadVarsESO failed to run.")
+        
+
+        # Run a test to see if E+ works
+        shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
+        if os.path.exists(shoebox_output):
+            shutil.rmtree(shoebox_output)
+        epw_file = os.path.join(self.plugin_dir, "testing.epw")
+        run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, "shoebox.idf"],
+                                     cwd=self.plugin_dir)
+        if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
+            self.initial_tests.append("EnergyPlus could not run.")
+        else:
+            print("EnergyPlus test completed successfully")
+        
+        # Run a test to see if ReadVarsESO works
+        try:
+            subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
+            print("ReadVarsESO test completed successfully")
+        except subprocess.CalledProcessError:
+            self.initial_tests.append("ReadVarsESO failed to run.")
         
 
         # Test that the QGIS Python works via subprocess
@@ -523,7 +528,10 @@ class SimstockQGIS:
                                          capture_output=True, text=True)
         if run_python_test.stdout != "success\n":
             self.initial_tests.append("Python could not be run.")
+        else:
+            print("Python test completed successfully")
         
+
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
             qgis.utils.iface.messageBar().pushMessage("Initial setup failed",
@@ -533,12 +541,17 @@ class SimstockQGIS:
             self.initial_setup_worked = False
             for error in self.initial_tests:
                 print("\n" + error + "\n")
+
         else:
             self.initial_setup_worked = True
             qgis.utils.iface.messageBar().pushMessage("Initial setup complete",
                                                       "Initial setup completed successfully. Please restart QGIS.",
                                                       level=Qgis.Success)
             print("\nInitial setup completed successfully. Please restart QGIS.\n")
+
+            # Delete test files
+            if os.path.exists(shoebox_output):
+                shutil.rmtree(shoebox_output)
 
 
 
