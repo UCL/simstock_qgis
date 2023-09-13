@@ -16,7 +16,7 @@ The non-LTR versions are likely to work too, however sometimes the Python versio
 Installation
 ------------
 
-1. The Simstock QGIS plugin is available from the official `QGIS Python Plugins Repository <https://plugins.qgis.org/plugins/>`_. It can be installed directly in QGIS by navigating to Plugins $\rightarrow$ Manage and install plugins.
+1. The Simstock QGIS plugin is available from the official `QGIS Python Plugins Repository <https://plugins.qgis.org/plugins/>`_. It can be installed directly in QGIS by navigating to Plugins -> Manage and install plugins.
 
 2. Also search for 'Plugin Reloader' and install it.
     
@@ -59,7 +59,12 @@ There are some important things to note when using the plugin:
 Overall workflow
 ----------------
 The figure below describes the Simstock plugin workflow at a glance. Step 1 only needs to be run once, and step 2 is optional depending on your input data. For detailed descriptions of each component, see the relevant sections of the documentation.
-![title](Figures/QG-interface.png)
+
+.. figure:: Figures/QG-interface.png
+   :width: 250px
+   :scale: 250 %
+   :alt: alternate text
+   :align: left
 
 
 .. _Input data:
@@ -156,7 +161,11 @@ Saving/reloading/exporting the database file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To set the cwd, browse to the desired path using the selector box and then select the green tick button.
 
-![title](Figures/QG-cwd.png)
+.. figure:: Figures/QG-cwd.png
+   :width: 150px
+   :scale: 250 %
+   :alt: alternate text
+   :align: left
 
 The project database file will be called `Simstock-Database.gpkg`:
 
@@ -171,7 +180,11 @@ Database
 --------
 Section cwd_ discussed how the database file is managed. This section will cover what the database is and how it can be viewed/edited.
 
-![title](Figures/QG-database1.png)
+.. figure:: Figures/QG-database1.png
+   :width: 250px
+   :scale: 250 %
+   :alt: alternate text
+   :align: left
 
 What it contains 
 ^^^^^^^^^^^^^^^^
@@ -187,7 +200,11 @@ After the cwd has been set, a number of layers will be loaded into the QGIS proj
 
 Each of these layers provide an easy way to interact with the EnergyPlus model objects. The structure of each layer, as well as their field names correspond to the standard EnergyPlus syntax. For the full documentation of each, see the links on each bullet point above.
 
-![title](Figures/QG-database2.png)
+.. figure:: Figures/QG-database2.png
+   :width: 250px
+   :scale: 250 %
+   :alt: alternate text
+   :align: left
 
 Interacting with the database
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -276,6 +293,7 @@ Each of the database layers above have unique entries for `Dwell`, `Commercial`,
 
 **Note:** The uses are fixed; they cannot be added or renamed. Instead, you can personalise the database objects belonging to `Use3` and `Use4` to create your own use types if necessary. A future planned feature is to generalise the mixed-use handling to allow more flexibility.
 
+
 .. _Editing the database:
 
 Editing the database
@@ -287,6 +305,7 @@ Warning:
 *  Do not change the database layer names
 *  Do not name any other layers "DB-..."
 *  If you make edits, check for duplicates or misspellings as these will cause errors during simulation.
+
 
 .. _Toggling heating and cooling loads:
 
@@ -349,6 +368,7 @@ Currently editable fields and what they represent:
 *  **epw:** Name of the weather file used for simulations. The specified file must be located at the base of the plugin directory (default: GBR_ENG_London.Wea.Ctr-St.James.Park.037700_TMYx.2007-2021.epw).
 
 In the future, it is aimed to move these settings into the main plugin interface to avoid users needing to access the plugin directory and simplify the process.
+
 
 Troubleshooting
 ===============
