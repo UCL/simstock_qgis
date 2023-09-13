@@ -50,8 +50,7 @@ There are some important things to note when using the plugin:
 * **Plugin Reloader**: Make sure the `Plugin Reloader <https://plugins.qgis.org/plugins/plugin_reloader/>`_ is also installed. The Simstock plugin will need to be reloaded after each use.
 
 .. figure:: Figures/QG-pyconsole.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -61,8 +60,7 @@ Overall workflow
 The figure below describes the Simstock plugin workflow at a glance. Step 1 only needs to be run once, and step 2 is optional depending on your input data. For detailed descriptions of each component, see the relevant sections of the documentation.
 
 .. figure:: Figures/QG-interface.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -84,8 +82,7 @@ The input data for each polygon is specified via the QGIS attribute table. Simst
 
 
 .. figure:: Figures/QG-attrs.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -127,14 +124,13 @@ After these fields have been added to the layer, they need to be filled out (exc
 
 Note that the newly created layer will need to be saved. This can be done by right-clicking on the layer and selecting *Make Permanent*. QGIS will then ask in what form to save it. It is possible to append this layer to an existing Geopackage if desired.
 
-Mixed-use
-^^^^^^^^^
+Mixed-use fields
+^^^^^^^^^^^^^^^^
 After creating and filling out these fields, more optional fields can be created to specify the use on each floor. To do this, make sure the `nofloors` has been entered for every non-shading polygon, then click *Add Fields* again. This will add a new  `FLOOR_X: use` field for every floor. The options for these fields are: `Dwell`, `Commercial`, `Use3` and `Use4`. To understand what effect these choices have, see the section on Mixed-use_.
 
 
 .. figure:: Figures/QG-mixeduse.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -162,8 +158,7 @@ Saving/reloading/exporting the database file
 To set the cwd, browse to the desired path using the selector box and then select the green tick button.
 
 .. figure:: Figures/QG-cwd.png
-   :width: 150px
-   :scale: 250 %
+   :width: 300px
    :alt: alternate text
    :align: left
 
@@ -181,8 +176,7 @@ Database
 Section cwd_ discussed how the database file is managed. This section will cover what the database is and how it can be viewed/edited.
 
 .. figure:: Figures/QG-database1.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -201,8 +195,7 @@ After the cwd has been set, a number of layers will be loaded into the QGIS proj
 Each of these layers provide an easy way to interact with the EnergyPlus model objects. The structure of each layer, as well as their field names correspond to the standard EnergyPlus syntax. For the full documentation of each, see the links on each bullet point above.
 
 .. figure:: Figures/QG-database2.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -211,20 +204,17 @@ Interacting with the database
 
 Viewing the database
 """"""""""""""""""""
-Right-click on one of the database layers and click *Open Attribute Table*. This will display the database in Table View - see Figure  TODO db1. Each row represents an individual element and the columns represent the fields of the element. A more intuitive way to view this is to select *Form View* at the bottom-right of the window - see Figure  TODO db2. 
-
+Right-click on one of the database layers and click *Open Attribute Table*. This will display the database in Table View - see below. Each row represents an individual element and the columns represent the fields of the element. A more intuitive way to view this is to select *Form View* at the bottom-right of the window - see below. 
 
 .. figure:: Figures/databaselayer1.png
-   :width: 250px
-   :scale: 250 %
+   :width: 400px
    :alt: alternate text
    :align: left
 
 The "MATERIAL" database layer, in Table View.
 
 .. figure:: Figures/databaselayer2.png
-   :width: 250px
-   :scale: 250 %
+   :width: 400px
    :alt: alternate text
    :align: left
 
@@ -256,8 +246,7 @@ $^2$`ceiling_inverse` must be composed of the exact same material layers as `cei
 The materials contained in the constructions can be found in the MATERIAL database. Some materials are shared amongst multiple constructions, so if you want to make a change which only affects one construction, you may have to duplicate materials. Remember to change the names to something unique and reference these in the relevant construction layer(s).
 
 .. figure:: Figures/QG-consts.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -298,7 +287,7 @@ Each of the database layers above have unique entries for `Dwell`, `Commercial`,
 
 Editing the database
 ^^^^^^^^^^^^^^^^^^^^
-Edit mode can be activated by selecting the pencil icon in the top-left corner (see Figures  TODO db1 db2). You can now make edits to any of the fields in the database. **When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.** If yes is selected, the changes will be saved to the `Simstock-Database.gpkg` file within your cwd. 
+Edit mode can be activated by selecting the pencil icon in the top-left corner (see figures above). You can now make edits to any of the fields in the database. **When you have finished making changes, select the pencil icon again to turn off editing mode. QGIS will ask if you would like to save these changes.** If yes is selected, the changes will be saved to the `Simstock-Database.gpkg` file within your cwd. 
 
 Warning:
 
@@ -342,14 +331,12 @@ The results will appear as a new layer in QGIS. This results layer is **not** sa
 **Note:** Do not re-run Simstock on a results layer. It will not be able to populate result fields since they already exist. Instead, use the original layer which was used to produce the result layer.
 
 .. figure:: Figures/QG-results1.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
 .. figure:: Figures/QG-results2.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
@@ -384,14 +371,12 @@ If a Python error occurs, a yellow notification appears in QGIS. The error can b
 Usually, the bold message at the top of the window provides a useful error message. Occasionally however, this is not so helpful and you will need to scroll down to check the later lines of the traceback.
 
 .. figure:: Figures/QG-pyerror1.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
 .. figure:: Figures/QG-pyerror2.png
-   :width: 250px
-   :scale: 250 %
+   :width: 600px
    :alt: alternate text
    :align: left
 
