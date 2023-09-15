@@ -5,3 +5,4 @@ EnergyPlus/*/
 eppy-scripts/psutil*/
 Database/*.csv
 shoebox-output/
+.vscode/
