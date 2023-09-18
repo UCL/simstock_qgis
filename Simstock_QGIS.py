@@ -240,9 +240,9 @@ class SimstockQGIS:
         # Locate QGIS Python, differs by OS
         qgis_python_dir = sys.exec_prefix
         if self.system == "windows":
-            self.qgis_python_location = qgis_python_dir + r"\python"
+            self.qgis_python_location = os.path.join(qgis_python_dir, "python")
         if self.system == "darwin":
-            self.qgis_python_location = qgis_python_dir + "/bin/python3"
+            self.qgis_python_location = os.path.join(qgis_python_dir, "bin", "python3")
 
         # Set up Eppy TODO: check if this works all the time
         from eppy.modeleditor import IDF, IDDAlreadySetError
@@ -291,7 +291,6 @@ class SimstockQGIS:
         # Check if the buttons were clicked and run function if so
         self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
         self.dlg.pbRunSim.clicked.connect(self.run_plugin)
-        #self.dlg.pbOptions.clicked.connect(self.launch_options)
         self.dlg.pbOptions.clicked.connect(self.add_fields)
         self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
         
@@ -308,7 +307,6 @@ class SimstockQGIS:
         # TODO:
         #   - Print out more useful information in the case that failures occured. This will be 
         #      useful if users need to report bugs, and can provide the important info for them.
-        #   - Run the EP test for Windows too
         #   - Put into functions, and maybe even separate script
         print("Initial setup starting...")
         
@@ -383,6 +381,7 @@ class SimstockQGIS:
                     #import extracttargz
                     #extracttargz.main()        #this throws an error for some reason
                     print("    Extracting EnergyPlus...")
+                    # TODO: feed in name of tar.gz file to script
                     subprocess.run([self.qgis_python_location, os.path.join(self.plugin_dir, "extracttargz.py")])
 
                     # Arrange in expected file path structure
@@ -478,20 +477,20 @@ class SimstockQGIS:
         if self.system == "darwin":
             # Make E+ application executable
             try:
-                chmod_cmd = subprocess.run("chmod +x '%s'" % self.energyplusexe, shell=True, check=True)
+                chmod_cmd = subprocess.run(["chmod", "+x", self.energyplusexe], check=True)
             except subprocess.CalledProcessError:
-                self.initial_tests.append("Chmod command failed on E+.")
+                self.initial_tests.append("Chmod command failed on EnergyPlus.")
 
             # Same for ReadVarsESO
             try:
-                chmod_cmd = subprocess.run("chmod +x '%s'" % self.readvarseso, shell=True, check=True)
+                chmod_cmd = subprocess.run(["chmod", "+x", self.readvarseso], check=True)
             except subprocess.CalledProcessError:
                 self.initial_tests.append("Chmod command failed on ReadVarsESO.")
 
             # Same for sh script
             mac_verify_ep = os.path.join(self.plugin_dir, "mac_verify_ep.sh")
             try:
-                chmod_cmd = subprocess.run("chmod +x '%s'" % mac_verify_ep, shell=True, check=True)
+                chmod_cmd = subprocess.run(["chmod", "+x", mac_verify_ep], check=True)
             except subprocess.CalledProcessError:
                 self.initial_tests.append("Chmod command failed on sh script.")
             
@@ -501,6 +500,7 @@ class SimstockQGIS:
                 print("Mac verify EnergyPlus sh script failed, but if",
                       "EnergyPlus runs correctly then this is not a problem.",
                       "It is possible that the initial setup was already run before.")
+                #print(mac_verify_ep_result.stderr.decode("utf-8"))
         
 
         # Run a test to see if E+ works
@@ -515,6 +515,7 @@ class SimstockQGIS:
         else:
             print("EnergyPlus test completed successfully")
         
+
         # Run a test to see if ReadVarsESO works
         try:
             subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
@@ -805,20 +806,8 @@ class SimstockQGIS:
             pass
 
         def getzones(idf):
-            '''Finds thermal zones in idf and outputs numpy array.'''
-            # zones = idf.idfobjects['ZONELIST'][0] #get zonenames
-            # lst = [""]*len(zones.fieldnames)    #initiate blank list
-            # 
-            # for i, fieldname in enumerate(zones.fieldnames):
-            #     lst[i]=zones[fieldname]     #extract zonenames from eppy obj
-            # 
-            # lst = np.array(lst)
-            # lst = lst[lst!=""]      #strip blank objects out
-            # zonelist = lst[2:]      #remove headers
-            
-            # Better approach
+            """Finds thermal zones in idf and outputs numpy array."""
             all_zones = np.array([zone.Name for zone in idf.idfobjects["ZONE"]])
-
             return all_zones
 
         def make_allresults_dict():
@@ -913,8 +902,7 @@ class SimstockQGIS:
 
         def new_attrs_all_floors(max_floors, attr_types, results_mode):
             """
-            Creates a result field for each result type up to the max
-            number of floors.
+            Creates a result field for each result type up to the max number of floors.
             
             Needs generalising - specifically using float for all result fields
             """
@@ -1048,7 +1036,6 @@ class SimstockQGIS:
             self.unique_ids = [f"UID{str(i).zfill(padding)}" for i in range(len(self.features))]
             
             # Add fields which are not floor-specific
-            #new_attrs = [(QgsField("UID", QVariant.String))]
             for field in self.headings:
                 heading, QVtype = field.split("-")
                 if heading != "polygon":
@@ -1073,6 +1060,7 @@ class SimstockQGIS:
         # Add new attribute types for the results for all floors
         new_attrs.extend(new_attrs_all_floors(max_floors, attr_types, results_mode))
 
+        # TODO: is this intermediate step necessary?
         for new_attr in new_attrs:
             layer_fields.append(new_attr)
         layer_attrs.extend(new_attrs)
@@ -1210,7 +1198,8 @@ class SimstockQGIS:
             both null and notes fields.
             
             Each dict within the returned list corresponds to a standalone idf object. 
-            The keys represent the field names of the idf object."""
+            The keys represent the field names of the idf object.
+            """
             dict_list = []
 
             # Each row represents a standalone idf object, so loop over each
@@ -1239,9 +1228,10 @@ class SimstockQGIS:
             return dict_list
 
         def get_required_materials(const):
-            """Looks in constructions and extracts the names of all required 
-            materials (i.e. the materials which are used in any of the 
-            constructions)."""
+            """
+            Looks in constructions and extracts the names of all required materials 
+            (i.e. the materials which are used in any of the constructions).
+            """
             materials_list = []
             for item in const:
                 materials = list(item.values())[1:] #ignore construction names
@@ -1260,8 +1250,7 @@ class SimstockQGIS:
                 idf.newidfobject(class_name,**obj)
 
         def add_materials(key, material_df, used_materials):
-            """Checks against required materials list, and adds those required 
-            to the idf."""
+            """Checks against required materials list, and adds those required to the idf."""
             materials = create_obj_dicts(material_df)
             material_type = key.split("-")[-1].replace("_", ":") #change names to match energyplus fields
             
@@ -1278,8 +1267,7 @@ class SimstockQGIS:
                 idf.newidfobject(material_type,**el) #expand each dictionary as a new material of the relevant type
             
         def attributes_to_dfs(layers):
-            """Converts layer's attribute table into dataframe and appends 
-            to a dictionary"""
+            """Converts layer's attribute table into dataframe and appends to a dictionary"""
             dict = {}
             for layer in layers:
                 cols = [field.name() for field in layer.fields()]
@@ -1292,6 +1280,7 @@ class SimstockQGIS:
         def bool_quick_fix(dfs):
             """To delete"""
             # TODO: work out a permanent fix for this
+            # One option is by using the csvt method that is in use for the schedules
             try:
                 dfs["DB-Fabric-WINDOWMATERIAL_GLAZING"]["Solar_Diffusing"] = "No"
             except KeyError:
@@ -1311,8 +1300,7 @@ class SimstockQGIS:
         except IDDAlreadySetError:
             pass
 
-        # Initialise base idf which will be added to and become the 
-        # basic_settings idf for Simstock
+        # Initialise base idf which will be added to and become the basic_settings.idf for Simstock
         idf = IDF(os.path.join(self.plugin_dir, 'base.idf'))
         
         # Find database layers in current project
@@ -1361,6 +1349,7 @@ class SimstockQGIS:
                 # Swap the names
                 thermostat.Heating_Setpoint_Temperature_Schedule_Name = "Dwell_Heat_Off"
                 thermostat.Cooling_Setpoint_Temperature_Schedule_Name = "Dwell_Cool_Off"
+
         elif self.HeatCool.lower() == "true":
             # Schedules already have the correct names in this case
             print("Heating and cooling are activated.")
