@@ -978,7 +978,20 @@ class SimstockQGIS:
                         if "UID" in str(feature):
                             done = True
                     if not done:
+                        # TODO: it is here that UID values are added, but unsure how to add other values if they are not next in order
                         feature_attrs.append(self.unique_ids[i])
+
+                    # Debugging feature to add default values to a newly created layer
+                    debugging = False # TODO: add these default vals to a list to make it easier
+                    if debugging:
+                        feature_attrs.append("false")
+                        feature_attrs.append(3.0)
+                        feature_attrs.append(12.0)
+                        feature_attrs.append(int(1))
+                        feature_attrs.append("uninsulated")
+                        feature_attrs.append("uninsulated_glazing")
+                        feature_attrs.append(0.7)
+                        feature_attrs.append(2.0)
 
                 # Set the feature's attributes
                 self.features[i].setAttributes(feature_attrs)
