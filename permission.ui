@@ -36,9 +36,7 @@
       </font>
      </property>
      <property name="text">
-      <string>The Simstock plugin requires EnergyPlus to generate and simulate the building energy models.
-
-Do you give permission for the plugin to download and install EnergyPlus into the plugin's directory?</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The Simstock plugin requires EnergyPlus to generate and simulate the building energy models.&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; color:#ff0000;&quot;&gt;Do you give permission for the plugin to download and install EnergyPlus into the plugin's directory?&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="scaledContents">
       <bool>false</bool>
@@ -66,7 +64,7 @@ Do you give permission for the plugin to download and install EnergyPlus into th
       </size>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Note: Simstock currently uses EnergyPlus v8.9. The install will take around 500mb of space.&lt;/p&gt;&lt;p&gt;This is an isolated install; it is required for the Simstock plugin to function, but will not affect any existing installations of EnergyPlus on your computer.&lt;/p&gt;&lt;p&gt;The download will be sourced from: &lt;a href=&quot;https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Note: Simstock currently uses EnergyPlus v8.9. The install will take up to ~500mb of space.&lt;/p&gt;&lt;p&gt;This is an isolated install; it is required for the Simstock plugin to function, but will not affect any existing installations of EnergyPlus on your computer.&lt;/p&gt;&lt;p&gt;The download will be sourced from: &lt;a href=&quot;https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
