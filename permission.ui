@@ -66,11 +66,12 @@ Do you give permission for the plugin to download and install EnergyPlus into th
       </size>
      </property>
      <property name="text">
-      <string>Note: Simstock currently uses EnergyPlus v8.9. The install will take around 500mb of space.
-This is an isolated install; it is required for the Simstock plugin to function, but will not affect any existing installations of EnergyPlus on your computer.
-The download will be sourced from https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Note: Simstock currently uses EnergyPlus v8.9. The install will take around 500mb of space.&lt;/p&gt;&lt;p&gt;This is an isolated install; it is required for the Simstock plugin to function, but will not affect any existing installations of EnergyPlus on your computer.&lt;/p&gt;&lt;p&gt;The download will be sourced from: &lt;a href=&quot;https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;https://github.com/NREL/EnergyPlus/releases/tag/v8.9.0&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
      <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+     <property name="openExternalLinks">
       <bool>true</bool>
      </property>
     </widget>
