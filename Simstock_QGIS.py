@@ -312,6 +312,9 @@ class SimstockQGIS:
         
         # Set up list to track success of each test
         self.initial_tests = []
+        
+        # Tracks unimportant issues, unless something fails in which case could be useful to debug
+        self.initial_tests_warnings = [] 
 
 
         # This is to select a different EnergyPlus source
@@ -470,7 +473,7 @@ class SimstockQGIS:
             print("Psutil version: ", psutil.__version__)
         except:
             # Do not fail if psutil is not imported, since it is not essential
-            print("Psutil failed to load.")
+            print("Psutil failed to load - not critical.")
             
         # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
@@ -500,11 +503,24 @@ class SimstockQGIS:
             # Call the sh script to bypass all the security warnings that occur when running E+
             mac_verify_ep_result = subprocess.run(["bash", mac_verify_ep], capture_output=True)
             if mac_verify_ep_result.returncode != 0:
-                print("Mac verify EnergyPlus sh script failed, but if",
+                msg = ("Mac verify EnergyPlus sh script failed, but if",
                       "EnergyPlus runs correctly then this is not a problem.",
                       "It is possible that the initial setup was already run before.")
-                #print(mac_verify_ep_result.stderr.decode("utf-8"))
-        
+                stderr = mac_verify_ep_result.stderr.decode("utf-8")
+                print(msg)
+                self.initial_tests_warnings.append(stderr)
+
+            # If Mac uses ARM architecture, check that user has installed Rosetta
+            if platform.processor().casefold() == "arm":
+                try:
+                    if not os.path.exists("/usr/libexec/rosetta"):
+                        raise Warning
+                    if len(os.listdir("/usr/libexec/rosetta")) == 0:
+                        raise Warning
+                except Warning:
+                    self.initial_tests_warnings.append("This appears to be a Silicon Mac with an ARM processor.\n"
+                                                    "Please ensure Rosetta is installed to allow EnergyPlus to run.")
+                
 
         # Run a test to see if E+ works
         shoebox_output = os.path.join(self.plugin_dir, "shoebox-output")
@@ -543,15 +559,22 @@ class SimstockQGIS:
                                                       level=Qgis.Critical,
                                                       duration=5)
             self.initial_setup_worked = False
-            for error in self.initial_tests:
-                print("\n" + error + "\n")
+
+            # Print errors to Python console
+            print("\nERRORS:")
+            [print(error) for error in self.initial_tests]
+
+            # Print warnings to Python console (if any)
+            if len(self.initial_tests_warnings) != 0:
+                print("\nWARNINGS:")
+                [print(warning) for warning in self.initial_tests_warnings]
 
         else:
             self.initial_setup_worked = True
             qgis.utils.iface.messageBar().pushMessage("Initial setup complete",
                                                       "Initial setup completed successfully. Please restart QGIS.",
                                                       level=Qgis.Success)
-            print("\nInitial setup completed successfully. Please restart QGIS.\n")
+            print("\nInitial setup completed successfully. Please restart QGIS.")
 
             # Delete test files
             if os.path.exists(shoebox_output):
