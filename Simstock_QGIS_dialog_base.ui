@@ -27,6 +27,18 @@
        <pointsize>26</pointsize>
       </font>
      </property>
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="lineWidth">
+      <number>2</number>
+     </property>
+     <property name="midLineWidth">
+      <number>0</number>
+     </property>
      <property name="text">
       <string>Simstock QGIS Plugin</string>
      </property>
@@ -92,7 +104,7 @@
      <property name="minimumSize">
       <size>
        <width>350</width>
-       <height>0</height>
+       <height>75</height>
       </size>
      </property>
      <property name="font">
@@ -100,11 +112,29 @@
        <pointsize>11</pointsize>
       </font>
      </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="lineWidth">
+      <number>1</number>
+     </property>
+     <property name="midLineWidth">
+      <number>0</number>
+     </property>
      <property name="text">
-      <string>First, choose the working directory and then select the tick button:</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check the &lt;a href=&quot;test&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;config file&lt;/span&gt;&lt;/a&gt; settings if necessary.&lt;/p&gt;&lt;p&gt;Next, choose the working directory and then select the tick button:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
+     </property>
+     <property name="margin">
+      <number>1</number>
      </property>
     </widget>
    </item>

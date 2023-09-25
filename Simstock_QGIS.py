@@ -293,6 +293,7 @@ class SimstockQGIS:
         self.dlg.pbRunSim.clicked.connect(self.run_plugin)
         self.dlg.pbOptions.clicked.connect(self.add_fields)
         self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
+        self.dlg.label_4.linkActivated.connect(self.open_config)
         
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -300,6 +301,18 @@ class SimstockQGIS:
         # See if OK was pressed
         if result:
             pass #don't do anything if OK was pressed
+
+
+
+    def open_config(self):
+        """Reveals the config file to the user directly"""
+        config_location = os.path.join(self.plugin_dir, "config.json")
+
+        if self.system == "windows":
+            subprocess.run(["explorer", "config.json"], cwd=self.plugin_dir)
+
+        if self.system == "darwin": #TODO: needs testing
+            subprocess.run(["open", "config.json"], cwd=self.plugin_dir)
 
 
 
@@ -554,6 +567,7 @@ class SimstockQGIS:
 
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
+            # TODO: print errors in QGIS console message if possible
             qgis.utils.iface.messageBar().pushMessage("Initial setup failed",
                                                       "Some errors have occured - please check the Python console outputs.",
                                                       level=Qgis.Critical,
@@ -629,10 +643,10 @@ class SimstockQGIS:
 
 
     def run_plugin(self):
-        # Check if initial setup worked #TODO: remove or change to warning
+        # Check if initial setup worked
         if self.initial_setup_worked is not None:
             if not self.initial_setup_worked:
-                raise RuntimeError("Initial setup failed! Cannot run Simstock.")
+                print("Warning: Initial setup previously failed - Simstock may not function correctly.")
         
         # Check if user cwd has been set
         if not self.cwd_set:
