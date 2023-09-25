@@ -34,21 +34,22 @@ except:
     pass
 
 parser = argparse.ArgumentParser()
-parser.add_argument("idf_dir", help="The path to the idf files")
+parser.add_argument("cwd", help="The path to the user cwd")
 args = parser.parse_args()
 
 class EP_Run():
-    def __init__(self, idf_dir):
+    def __init__(self, cwd):
         self.plugin_dir = os.path.dirname(__file__)
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
-        self.idf_dir = idf_dir
+        self.cwd = cwd
+        self.idf_dir = os.path.join(cwd, "idf_files")
         self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
         self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
 
         # Load config file
         with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
             self.config = json.load(read_file)
-        self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
+        self.epw_file = os.path.join(self.cwd, self.config["epw"])
         
         # Find the computer's operating system and find energyplus version
         system = platform.system().lower()
@@ -80,8 +81,8 @@ class EP_Run():
     
 def main():
 
-    idf_dir = args.idf_dir
-    runner = EP_Run(idf_dir)
+    cwd = args.cwd
+    runner = EP_Run(cwd)
     try:
         cores = pu.cpu_count(logical=False) - 1 #use one less core than available
     except:

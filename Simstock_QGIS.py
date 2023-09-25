@@ -761,7 +761,7 @@ class SimstockQGIS:
                 #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
 
                 # Weather file
-                self.epw_file = os.path.join(self.plugin_dir, self.config["epw"])
+                self.epw_file = os.path.join(self.user_cwd, self.config["epw"])
                 if not os.path.exists(self.epw_file):
                     raise FileNotFoundError(f"Weather epw_file '{self.epw_file}'\nnot found! Check "
                     "that it exists in the plugin's base directory and that is spelled correctly in "
@@ -786,7 +786,7 @@ class SimstockQGIS:
                     print("Running EnergyPlus simulation on multiple cores...")
                     multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
                     t1 = time.time()
-                    out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.idf_dir], capture_output=True, text=True)
+                    out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.user_cwd], capture_output=True, text=True)
                     if out.returncode != 0:
                         raise RuntimeError(out.stderr)
                     print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
