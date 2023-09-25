@@ -6,7 +6,7 @@ version=0.1
 author=UCL
 email=shyam.amrith.14@ucl.ac.uk
 
-about=Takes a QGIS layer as input data, generates EnergyPlus building models, simulates, and returns the simulation results back to QGIS as a new layer with added attributes. See full documentation (homepage) for instructions on how to use the Simstock QGIS plugin. Currently supports Windows and Mac OS, with Linux support planned for a future update.
+about=Takes a QGIS layer as input data, generates EnergyPlus building models, simulates, and returns the simulation results back to QGIS as a new layer with added attributes. See full documentation (homepage) for instructions on how to use the Simstock QGIS plugin. Currently supports Windows and Mac OS, with Linux support planned for a future update. Packages EnergyPlus, Eppy and Munch with their licenses.
 
 # tracker=https://github.com/UCL/simstock_qgis/issues
 repository=https://github.com/UCL/simstock_qgis
