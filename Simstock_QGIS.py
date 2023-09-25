@@ -22,11 +22,11 @@
  ***************************************************************************/
 """
 from unittest import result
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant, QUrl
+from qgis.PyQt.QtGui import QIcon, QDesktopServices
 from qgis.PyQt.QtWidgets import QAction
 
-from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField, QgsFields, QgsVectorFileWriter, QgsCoordinateTransformContext #to get layers
+from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField, QgsFields, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsApplication
 
 # Initialize Qt resources from file resources.py
 from .resources import *
@@ -188,18 +188,33 @@ class SimstockQGIS:
 
         return action
 
+
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
+        # Default action
         icon_path = ':/plugins/Simstock_QGIS/icon.png'
         self.add_action(
             icon_path,
             text=self.tr(u'Simstock'),
             callback=self.run,
             parent=self.iface.mainWindow())
+        
+        # Help action
+        self.help_action = QAction(QgsApplication.getThemeIcon("/mActionContextHelp.png"),
+                                   self.tr("Simstock Documentation"),
+                                   self.iface.mainWindow())
+        # Add the action to the Help menu
+        self.iface.pluginHelpMenu().addAction(self.help_action)
+        self.help_action.triggered.connect(self.show_help)
 
         # will be set False in run()
         self.first_start = True
+    
+
+    def show_help(self):
+        """Display documentation online"""
+        QDesktopServices.openUrl(QUrl('https://simstock.readthedocs.io/en/latest/simstockqgis.html'))
 
 
     def unload(self):
