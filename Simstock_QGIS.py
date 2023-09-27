@@ -260,7 +260,7 @@ class SimstockQGIS:
         if self.system == "darwin":
             self.qgis_python_location = os.path.join(qgis_python_dir, "bin", "python3")
 
-        # Set up Eppy TODO: check if this works all the time
+        # Set up Eppy
         from eppy.modeleditor import IDF, IDDAlreadySetError
         if self.system in ['windows', 'linux', 'darwin']:
             iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
@@ -349,7 +349,6 @@ class SimstockQGIS:
         # This is to select a different EnergyPlus source
         # TODO: decide on the best source and delete the other methods
         ep_source = "download" # "packaged" or "download" or "user"
-        #self.system = "darwin" #debugging
 
         if not os.path.exists(os.path.dirname(self.energyplusexe)):
             if ep_source == "packaged":
@@ -374,7 +373,7 @@ class SimstockQGIS:
                     ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Darwin-x86_64.tar.gz"
 
                 EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
-                ep_plat_dir = os.path.join(self.EP_DIR, f'ep8.9_{self.system}')#os.path.dirname(self.energyplusexe) #debugging
+                ep_plat_dir = os.path.dirname(self.energyplusexe)
 
                 # Get user's permission before downloading EnergyPlus
                 self.ask_permission()
@@ -449,14 +448,10 @@ class SimstockQGIS:
                         except:
                             pass
 
-                    # TODO: check for Rosetta
-
             if ep_source == "user":
                 pass
-                # TODO:
                 #   - Main part is creating user notice to download from link, and provide file path with path selector
                 #   - Can use the same code as download, but without download step
-            #raise RuntimeError #debugging
 
 
         # Psutil excluded for now
@@ -497,12 +492,12 @@ class SimstockQGIS:
         except ImportError:
             self.initial_tests.append("Shapely failed to load.")
             
-        try:
-            import psutil
-            print("Psutil version: ", psutil.__version__)
-        except:
-            # Do not fail if psutil is not imported, since it is not essential
-            print("Psutil failed to load - not critical.")
+        # try:
+        #     import psutil
+        #     print("Psutil version: ", psutil.__version__)
+        # except:
+        #     # Do not fail if psutil is not imported, since it is not essential
+        #     print("Psutil failed to load - not critical.")
             
         # Test Python script
         test_python = os.path.join(self.plugin_dir, "test_python.py")
@@ -672,7 +667,7 @@ class SimstockQGIS:
         self.setup_basic_settings()
         
         if self.simulation_started:
-            print("\nTo re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.") #TODO: add reference to documentation
+            print("\nTo re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.")
             
         else:
             qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
@@ -922,7 +917,6 @@ class SimstockQGIS:
                 # Output definition
                 # Get operative temperature and use thresholds to get hours above/below
                 operative_series = get_result_val("Zone Operative Temperature", df)
-                # TODO: do less/greater than or equal to, since setpoints are likely to be set to these exact values
                 below = operative_series[operative_series < self.low_temp_threshold].count()
                 above = operative_series[operative_series > self.high_temp_threshold].count()
                 
@@ -1183,7 +1177,7 @@ class SimstockQGIS:
 
             for i, file in enumerate(database_csvs):
 
-                # Load the csv as a vector layer #TODO: find out how to specify data type for some columns
+                # Load the csv as a vector layer
                 uri = "file:///" + file.path + "?delimiter={}".format(",")
                 vlayer = QgsVectorLayer(uri, database_layer_names[i], "delimitedtext")
 
@@ -1295,7 +1289,6 @@ class SimstockQGIS:
 
                         # Next check avoids QGIS bug where it appends "_1" to numbered fields
                         # when importing csv (e.g. "Field_1" becomes "Field_1_1")
-                        # TODO: find out if any other idf objects use numbered fields
                         if dfname is not None and "schedule" in dfname.lower() and label[:5] == "Field":
                             label = label[:-2]
 
