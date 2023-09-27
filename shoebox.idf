@@ -38,14 +38,14 @@ HeatBalanceAlgorithm,
     200;                      !- Surface Temperature Upper Limit
 
 Timestep,
-    6;                        !- Number of Timesteps per Hour
+    1;                        !- Number of Timesteps per Hour
 
 RunPeriod,
     ,                         !- Name
     1,                        !- Begin Month
     1,                        !- Begin Day of Month
-    12,                       !- End Month
-    31,                       !- End Day of Month
+    1,                        !- End Month
+    2,                        !- End Day of Month
     Monday,                   !- Day of Week for Start Day
     Yes,                      !- Use Weather File Holidays and Special Days
     Yes,                      !- Use Weather File Daylight Saving Period
