@@ -998,6 +998,7 @@ class SimstockQGIS:
                 
                 # Grab the attributes from this feature
                 feature_attrs = self.features[i].attributes()
+                
                 if results_mode:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
@@ -1026,18 +1027,27 @@ class SimstockQGIS:
                     # Put the results with the rest of the attributes ready for adding
                     feature_attrs.extend(result_vals)
                 
-                # Add the UID but only if it doesn't already exist
                 elif not results_mode:
+                    # Check if UID values already exist
                     done = False
                     for feature in feature_attrs:
+                        # This checks the values themselves rather than the col name
+                        # TODO: This is not rigorous enough as it could incorrectly flag, but UID
+                        #       field has already been added by this point. Could append to list...
                         if "UID" in str(feature):
                             done = True
+
+                    # Add the UID values if not present
                     if not done:
-                        # TODO: it is here that UID values are added, but unsure how to add other values if they are not next in order
+                        # Note: This relies on the UID column being the first to be added which is
+                        #       always true. The above check also avoids adding these values if they
+                        #       already exist. If it is necessary to add other values, can use
+                        #       [f.name() for f in self.features[i].fields()] to get fields in order.
                         feature_attrs.append(self.unique_ids[i])
 
                     # Debugging feature to add default values to a newly created layer
-                    debugging = False # TODO: add these default vals to a list to make it easier
+                    # Note: this fails if some of the columns already exist, but is only for testing
+                    debugging = False #TODO: add these default vals to a list to make it easier
                     if debugging:
                         feature_attrs.append("false")
                         feature_attrs.append(3.0)
