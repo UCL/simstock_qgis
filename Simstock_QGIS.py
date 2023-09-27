@@ -193,12 +193,13 @@ class SimstockQGIS:
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
         # Default action
-        icon_path = ':/plugins/Simstock_QGIS/icon.png'
+        icon_path = ':/plugins/Simstock_QGIS/icon.svg'
         self.add_action(
             icon_path,
             text=self.tr(u'Simstock'),
             callback=self.run,
             parent=self.iface.mainWindow())
+        # Run "pyrcc5 -o resources.py resources.qrc" to update icon
         
         # Help action
         self.help_action = QAction(QgsApplication.getThemeIcon("/mActionContextHelp.png"),
