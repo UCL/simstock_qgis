@@ -289,6 +289,8 @@ class SimstockQGIS:
         # Load config file
         with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
             self.config = json.load(read_file)
+            #TODO: deal with other encodings, specifically utf-8-sig which is used by Windows notepad
+            #      or just switch to GUI method
 
 
 
@@ -635,21 +637,6 @@ class SimstockQGIS:
             self.add_new_layer(results_mode=False)
         else:
             print("Please reload the plugin if 'Add Fields' needs to be used again.")
-            
-
-
-    def run_ep(self, idf_path):
-        # TODO: move to mptest.py
-        idf_fname = os.path.basename(idf_path)
-        output_dir = idf_fname[:-4]
-        out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_fname],
-                              cwd=self.idf_dir, capture_output=True, text=True) #no readvarseso
-        if out.returncode != 0:
-            raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_fname)
-        
-        # For debugging
-        #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-        #    f.write(str(out))# + "\n")
 
 
 
@@ -782,52 +769,33 @@ class SimstockQGIS:
                 idf_result_dirs = []
                 for idf_path in self.idf_files:
                     idf_result_dirs.append(idf_path[:-4])
-                
-                # Single core
+
+                # Simulate
+                simulationscript = os.path.join(self.plugin_dir, "mptest.py")
+
+                t1 = time.time()
                 if not multiprocessing:
                     print("Running EnergyPlus simulation on a single core...")
-                    for i, idf_file in enumerate(self.idf_files):
-                        print(f"Starting simulation {i+1} of {len(self.idf_files)}")
-                        self.run_ep(idf_file)
-                    generate_rvis(idf_result_dirs)
-                    run_readvarseso(idf_result_dirs)
-                
-                # Parallel processing
+                    out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd, "--singlecore"], capture_output=True, text=True)
                 else:
                     print("Running EnergyPlus simulation on multiple cores...")
-                    multiprocessingscript = os.path.join(self.plugin_dir, "mptest.py")
-                    t1 = time.time()
-                    out = subprocess.run([self.qgis_python_location, multiprocessingscript, self.user_cwd], capture_output=True, text=True)
-                    if out.returncode != 0:
-                        raise RuntimeError(out.stderr)
-                    print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
-                    
-                    # For debugging
-                    #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-                    #    f.write(str(out))# + "\n")
+                    out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd], capture_output=True, text=True)
+
+                if out.returncode != 0:
+                    raise RuntimeError(out.stderr)
+                    # TODO: allow continuation even if EP fails, and load NULL results for that BI
+                
+                print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
+                
+                # For debugging
+                #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
+                #    f.write(str(out))# + "\n")
                 
                 #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
                 return idf_result_dirs
             
-            def run_readvarseso(idf_result_dirs):
-                """Calls ReadVarsESO after rvi files have been generated to
-                produce the csv result files."""
-                for dir in idf_result_dirs:
-                    subprocess.run([self.readvarseso, "results-rvi.rvi", "unlimited"], cwd=dir)
-            
-            def generate_rvis(idf_result_dirs):
-                """
-                Generates .rvi files within each simulation directory
-                to be used by ReadVarsESO
-
-                TODO: combine with mp function so that only one needs to be changed
-                """
-                for dir in idf_result_dirs:
-                    with open (os.path.join(dir, "results-rvi.rvi"), "w") as f:
-                        f.write("eplusout.eso\neplusout.csv\n0")
 
             # Run E+ simulation, generate .rvi files and run ReadVarsESO
-            #self.idf_files = [file.path for file in os.scandir(self.idf_dir) if file.name[-4:] == ".idf"]
             self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
             self.idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
 

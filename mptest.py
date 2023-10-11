@@ -35,6 +35,7 @@ except:
 
 parser = argparse.ArgumentParser()
 parser.add_argument("cwd", help="The path to the user cwd")
+parser.add_argument("--singlecore", action="store_true", help="If specified, simulation will use single core")
 args = parser.parse_args()
 
 class EP_Run():
@@ -68,26 +69,45 @@ class EP_Run():
             raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_file)
         
         # Generate the .rvi file
-        with open (os.path.join(output_path, "results-rvi.rvi"), "w") as f:
-            f.write("eplusout.eso\neplusout.csv\n0")
+        self.generate_rvi(output_path)
         
         # Call ReadVarsESO to produce the results csv
+        self.run_readvarseso(output_path)
+
+    @staticmethod
+    def generate_rvi(output_path):
+        with open (os.path.join(output_path, "results-rvi.rvi"), "w") as f:
+            f.write("eplusout.eso\neplusout.csv\n0")
+
+    def run_readvarseso(self, output_path):
         subprocess.run([self.readvarseso, "results-rvi.rvi", "unlimited"], cwd=output_path)
         
     def run_ep_multi(self, cores):
         p = mp.Pool(cores)
         p.map(self.run_ep, self.idf_files)
         p.close()
+
+    def run_ep_single(self):
+        for i, idf_file in enumerate(self.idf_files):
+            print(f"Starting simulation {i+1} of {len(self.idf_files)}")
+            self.run_ep(idf_file)
+
     
 def main():
-
     cwd = args.cwd
     runner = EP_Run(cwd)
-    try:
-        cores = pu.cpu_count(logical=False) - 1 #use one less core than available
-    except:
-        cores = mp.cpu_count() - 1
-    runner.run_ep_multi(cores)
+
+    # Single-core simulation
+    if args.singlecore:
+        runner.run_ep_single()
+    
+    # Multi-core simulation
+    else:
+        try:
+            cores = pu.cpu_count(logical=False) - 1 #use one less core than available
+        except:
+            cores = mp.cpu_count() - 1
+        runner.run_ep_multi(cores)
 
 if __name__ == '__main__':
     main()
