@@ -83,6 +83,11 @@ def main():
     # save preprocessed file
     newdf.to_csv(os.path.join(ROOT_DIR, 'sa_preprocessed.csv'), index=False)
 
+    # Raise error if BIs were not properly resolved
+    if len(newdf["bi"]) != len(newdf["bi"].dropna()):
+        raise Exception("Simstock was unable to resolve all built islands. "
+                        "It is likely that intersections are present.")
+
     pt('##### preprocessing completed in:', start)
 
 
@@ -163,10 +168,6 @@ def bi_adj(df):
         #     if row['sa_collinear_touching'] != row['adjacent']:
         #         raise RuntimeError("built island mismatch")
         # Can drop the adjacent column at this point
-    
-    if len(gdf["bi"]) != len(gdf["bi"].dropna()):
-        raise Exception("Simstock was unable to resolve all built islands. "
-                        "It is likely that intersections are present.")
 
     try:
         non_shading_gdf = gdf[gdf["shading"] == False]["bi"]
