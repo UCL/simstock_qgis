@@ -216,6 +216,7 @@ class SimstockQGIS:
     def show_help(self):
         """Display documentation online"""
         QDesktopServices.openUrl(QUrl('https://simstock.readthedocs.io/en/latest/simstockqgis.html'))
+        # TODO: add link to plugin UI too
 
 
     def unload(self):
@@ -348,11 +349,49 @@ class SimstockQGIS:
         self.initial_tests_warnings = [] 
 
 
-        # This is to select a different EnergyPlus source
-        # TODO: decide on the best source and delete the other methods
-        ep_source = "download" # "packaged" or "download" or "user"
+        def locate_ep_files():
+            """
+            Locates all required EnergyPlus files.
 
-        if not os.path.exists(os.path.dirname(self.energyplusexe)):
+            Returns a dictionary where the key is the name of the required file, and the value
+            states True or False to indicate whether the file was found or not.
+            """
+            # List of required EP files according to platform
+            if self.system == "windows":
+                ep_files = ["Energy+.idd", "energyplus.exe", "energyplusapi.dll", "ReadVarsESO.exe"]
+            elif self.system == "darwin":
+                ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib", "libgcc_s.1.dylib",
+                            "libgfortran.3.dylib", "libquadmath.0.dylib", "ReadVarsESO"]
+
+            # Initialise dictionary
+            d = {}
+            for x in ep_files:
+                d[x] = True
+
+            # Loop over required files list
+            for f in d.keys():
+                fp = os.path.join(self.ep_plat_dir, f)
+                if os.path.exists(fp):
+                    print(f"Located '{f}'")
+                else:
+                    # Move file if not in expected directory
+                    fp = os.path.join(self.ep_plat_dir, "PostProcess", f)
+                    if os.path.exists(fp):
+                        print(f"Located '{f}'")
+                        shutil.move(fp, os.path.join(self.ep_plat_dir, f))
+                    else:
+                        # Change val to False if the file was not found
+                        d[f] = False
+            return d
+
+
+        # This is to select a different EnergyPlus source
+        ep_source = "download" # "packaged" or "download" or "user"
+        self.ep_plat_dir = os.path.dirname(self.energyplusexe)
+
+        # If not all required EP files were found, source these externally
+        if not all(locate_ep_files().values()):
+
             if ep_source == "packaged":
                 # Unzip EnergyPlus according to platform
                 EP_zipfile = os.path.join(self.EP_DIR, f"ep8.9_{self.system}.zip")
@@ -365,22 +404,29 @@ class SimstockQGIS:
                 [os.remove(f) for f in os.scandir(self.EP_DIR) if f.name[-4:]==".zip"]
 
 
+            # Download EnergyPlus option
             if ep_source == "download":
-                # Download EnergyPlus option
 
+                # Delete EP folder (if exists) since not all required files were found
+                if os.path.exists(self.ep_plat_dir):
+                    shutil.rmtree(self.ep_plat_dir)
+
+                # EP download urls according to platform
                 if self.system == "windows":
                     ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Windows-x86_64.zip"
 
                 elif self.system == "darwin":
                     ep_link = "https://github.com/NREL/EnergyPlus/releases/download/v8.9.0/EnergyPlus-8.9.0-40101eaafd-Darwin-x86_64.tar.gz"
 
+                # Get filename of zipfile from url
                 EP_zipfile = os.path.join(self.EP_DIR, ep_link.split("/")[-1])
-                ep_plat_dir = os.path.dirname(self.energyplusexe)
 
                 # Get user's permission before downloading EnergyPlus
                 self.ask_permission()
                 if self.permission == "n":
                     print("User permission not granted to download EnergyPlus.")
+                    self.initial_tests_warnings.append("User permission not granted to download EnergyPlus.")
+                    # TODO: this fails at extraction step - should raise a more useful error
 
                 elif self.permission == "y":
                     print("User permission granted to download EnergyPlus.")
@@ -404,9 +450,8 @@ class SimstockQGIS:
                         fp.extractall(self.EP_DIR)
 
                     # Arrange in expected file path structure
-                    shutil.move(os.path.join(EP_zipfile[:-4], "EnergyPlus-8-9-0"), ep_plat_dir)
+                    shutil.move(os.path.join(EP_zipfile[:-4], "EnergyPlus-8-9-0"), self.ep_plat_dir)
                     shutil.rmtree(EP_zipfile[:-4]) #delete empty dir
-                    ep_files = ["Energy+.idd", "energyplus.exe", "energyplusapi.dll", "ReadVarsESO.exe"]
 
                 if self.system == "darwin":
 
@@ -418,37 +463,25 @@ class SimstockQGIS:
                     subprocess.run([self.qgis_python_location, os.path.join(self.plugin_dir, "extracttargz.py")])
 
                     # Arrange in expected file path structure
-                    shutil.move(os.path.join(EP_zipfile[:-7], "EnergyPlus-8-9-0"), ep_plat_dir)
+                    shutil.move(os.path.join(EP_zipfile[:-7], "EnergyPlus-8-9-0"), self.ep_plat_dir)
                     shutil.rmtree(EP_zipfile[:-7]) #delete empty dir
-                    ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib", "libgcc_s.1.dylib",
-                            "libgfortran.3.dylib", "libquadmath.0.dylib", "ReadVarsESO"]
                 
 
                 # Check that all required files are present and report status
-                clean_up = True
-                for f in ep_files:
-                    fp = os.path.join(ep_plat_dir, f)
-                    if os.path.exists(fp):
-                        print(f"Located '{f}'")
-                    else:
-                        # Move file if not in expected directory
-                        fp = os.path.join(ep_plat_dir, "PostProcess", f)
-                        if os.path.exists(fp):
-                            print(f"Located '{f}'")
-                            shutil.move(fp, os.path.join(ep_plat_dir, f))
-                        else:
-                            self.initial_tests.append(f"Could not locate '{f}'")
-                            clean_up = False #do not perform clean-up if some files are missing
+                clean_up = locate_ep_files()
 
                 # Clean up if all files were located
-                if clean_up:
+                if all(clean_up.values()):
                     os.remove(EP_zipfile)
                     to_delete = ["ExampleFiles", "PreProcess", "Documentation", "DataSets", "PostProcess", "WeatherData"]
                     for fdir in to_delete:
                         try:
-                            shutil.rmtree(os.path.join(ep_plat_dir, fdir))
+                            shutil.rmtree(os.path.join(self.ep_plat_dir, fdir))
                         except:
                             pass
+                else:
+                    not_found = [key for key, value in clean_up.items() if not value]
+                    self.initial_tests.append(f"Could not locate: {', '.join(not_found)}")
 
             if ep_source == "user":
                 pass
@@ -553,8 +586,16 @@ class SimstockQGIS:
         if os.path.exists(shoebox_output):
             shutil.rmtree(shoebox_output)
         epw_file = os.path.join(self.plugin_dir, "testing.epw")
-        run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, "shoebox.idf"],
-                                     cwd=self.plugin_dir)
+
+        # Try running EP
+        try:
+            run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, "shoebox.idf"],
+                                        cwd=self.plugin_dir)
+        except:
+            # The above will fail if EP was not found
+            pass
+
+        # Check for EP test results
         if not os.path.exists(os.path.join(shoebox_output, "eplusout.err")):
             self.initial_tests.append("EnergyPlus could not run.")
         else:
@@ -565,7 +606,9 @@ class SimstockQGIS:
         try:
             subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
             print("ReadVarsESO test completed successfully")
-        except subprocess.CalledProcessError:
+        except:
+            # Note: this will fail if EP failed to run - this does not necessarily indicate a 
+            # problem with ReadVarsESO
             self.initial_tests.append("ReadVarsESO failed to run.")
         
 
@@ -581,10 +624,9 @@ class SimstockQGIS:
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
             # TODO: print errors in QGIS console message if possible
-            qgis.utils.iface.messageBar().pushMessage("Initial setup failed",
-                                                      "Some errors have occured - please check the Python console outputs.",
-                                                      level=Qgis.Critical,
-                                                      duration=5)
+            self.iface.messageBar().pushMessage("Initial setup failed",
+                                                "Some errors have occured - please check the Python console outputs.",
+                                                level=Qgis.Critical)
             self.initial_setup_worked = False
 
             # Print errors to Python console
