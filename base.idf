@@ -269,17 +269,11 @@ ThermostatSetpoint:DualSetpoint,
 
 Output:VariableDictionary,IDF;
 
-!-   ===========  ALL OBJECTS IN CLASS: OUTPUT:TABLE:SUMMARYREPORTS ===========
-
-
-Output:Table:SummaryReports,
-    AllSummary;              !- Report 1 Name
-
 
 !-   ===========  ALL OBJECTS IN CLASS: OUTPUTCONTROL:TABLE:STYLE ===========
 
 OutputControl:Table:Style,
-    CommaAndHTML,            !- Column Separator
+    Comma,            !- Column Separator
     JtoKWH;                  !- Unit Conversion
 
 
