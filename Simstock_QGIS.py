@@ -1121,11 +1121,11 @@ class SimstockQGIS:
         else:
             self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
             new_layer_name = self.selectedLayer.name() + "_1"
+        
+        # Get CRS from old layer
+        crs = self.selectedLayer.crs().authid()
 
         # Create new layer in memory for the results
-        #TODO: Can CRS be sourced from project somehow?
-        crs = self.config["CRS"] #get CRS from config file
-        #crs = "epsg:4326" #or 32718
         mem_layer = QgsVectorLayer(f"Polygon?crs={crs}", new_layer_name, "memory")
         mem_layer_data = mem_layer.dataProvider()
 

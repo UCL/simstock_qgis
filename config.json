@@ -1,5 +1,4 @@
 {
-    "CRS": "epsg:27700",
     "Shading buffer radius - m": "50",
     "epw": "testing.epw",
 
