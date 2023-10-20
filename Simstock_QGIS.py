@@ -682,6 +682,23 @@ class SimstockQGIS:
 
 
 
+    def push_msg(self, title, text, qgislevel=Qgis.Critical, duration=None):
+        """Pushes a message to both QGIS and the Python console."""
+
+        print(title + "\n" + text)
+
+        if duration is None:
+            self.iface.messageBar().pushMessage(title,
+                                                text,
+                                                level=qgislevel)
+        else:
+            self.iface.messageBar().pushMessage(title,
+                                                text, 
+                                                level=qgislevel,
+                                                duration=duration)
+
+
+
     def run_plugin(self):
         # Check if initial setup worked
         if self.initial_setup_worked is not None:
@@ -690,7 +707,10 @@ class SimstockQGIS:
         
         # Check if user cwd has been set
         if not self.cwd_set:
-            raise RuntimeError("Please set the working directory first!")
+            self.push_msg(title="CWD not set!",
+                          text="Please set the cwd before attempting to run Simstock.",
+                          duration=5)
+            return
 
         # Setup basic settings idf from database materials/constructions
         self.setup_basic_settings()
@@ -727,8 +747,17 @@ class SimstockQGIS:
             for heading in headings[1:]:
                 try:
                     dfdict[heading] = [feature[heading] for feature in self.features]
+
                 except KeyError:
-                    raise Exception("Attribute '%s' was not found in the attribute table. Check that it is present and spelled correctly and try again." % heading)
+                    print(f"Field '{heading}' was not found in the attribute table.\n"
+                           "Use 'Add Fields' to add the required Simstock fields to the layer.")
+                    self.iface.messageBar().pushMessage(f"Field '{heading}' not found",
+                                    "Use 'Add Fields' to add the required Simstock fields to the layer.",
+                                    level=Qgis.Critical)
+                    return
+                    # TODO: If layers are saved as shapefile, the field names can be shortened due to 
+                    #       a character limit. Include a warning. Should the field names be shortened?
+
 
             # Data checks
             # Check values which are required for all polygons
@@ -771,9 +800,9 @@ class SimstockQGIS:
                 try:
                     dfdict[heading] = [feature[heading] for feature in self.features]
                 except KeyError:
-                    print("""Could not find 'use' column(s). Assuming all zones to be 'Dwell'.\n
-                          To add the 'use' columns, fill out the 'nofloors' column and then use 
-                          'Add Fields' afterwards.""")
+                    print("Could not find 'use' column(s). Assuming all zones to be 'Dwell'.\n"
+                          "To add the 'use' columns, fill out the 'nofloors' column and then use "
+                          "'Add Fields' afterwards.")
 
             # Save data as csv for Simstock to read
             data = pd.DataFrame(dfdict)
@@ -803,9 +832,15 @@ class SimstockQGIS:
                 # Weather file
                 self.epw_file = os.path.join(self.user_cwd, self.config["epw"])
                 if not os.path.exists(self.epw_file):
-                    raise FileNotFoundError(f"Weather epw_file '{self.epw_file}'\nnot found! Check "
-                    "that it exists in the plugin's base directory and that is spelled correctly in "
-                    "the 'config.json' file.")
+                    print(f"Weather epw_file '{self.epw_file}' not found! "
+                           "Check that it exists in the cwd and that is spelled correctly in "
+                           "the 'config.json' file.")
+                    self.iface.messageBar().pushMessage("Weather epw file not found",
+                                    "Check that it exists in the cwd and that is spelled correctly in "
+                                    "the 'config.json' file.",
+                                    level=Qgis.Critical,
+                                    duration=10)
+                    return
 
                 # List of output directory names
                 idf_result_dirs = []
@@ -826,6 +861,8 @@ class SimstockQGIS:
                 if out.returncode != 0:
                     raise RuntimeError(out.stderr)
                     # TODO: allow continuation even if EP fails, and load NULL results for that BI
+                    # TODO: if the stderr is printed instead of raised, it is a mess - need to pass error in a better way
+                    # TODO: if fails, but old results exist, does it just use those?
                 
                 print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
                 
@@ -840,10 +877,14 @@ class SimstockQGIS:
             # Run E+ simulation, generate .rvi files and run ReadVarsESO
             self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
             self.idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
+            if self.idf_result_dirs is None:
+                return
 
             # Push the results to a new QGIS layer
             self.add_new_layer(results_mode=True)
-            qgis.utils.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.", level=Qgis.Success)
+            self.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.",
+                                                level=Qgis.Success,
+                                                duration=10)
 
             
     ### RESULTS HANDLING
@@ -854,6 +895,7 @@ class SimstockQGIS:
             - Retrieving the results of interest by thermal zone
             - Pushing the results back to the new layer
             - Pushing the new layer to the QGIS console
+            
         This is also now called by the "Add Fields" button with results_mode=False
         TODO: move result fetching fns elsewhere.
         """
@@ -1194,7 +1236,14 @@ class SimstockQGIS:
                 # First layer addition to gpkg must be done differently to the rest
                 if i == 0:
                     o_save_options.layerName = database_layer_names[i]
-                    writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
+                    try:
+                        writer = QgsVectorFileWriter.writeAsVectorFormatV3(vlayer, self.gpkg_path[:-5], context, o_save_options)
+                    except AttributeError:
+                        print("An internal QGIS function was not found. It is likely that you need to update your version of QGIS.")
+                        self.iface.messageBar().pushMessage("Internal QGIS function not found",
+                                                "An internal QGIS function was not found. It is likely that you need to update your version of QGIS.",
+                                                level=Qgis.Critical)
+                        raise Exception("An internal QGIS function was not found. It is likely that you need to update your version of QGIS.")
 
                 # Add the remaining layers
                 else: 
@@ -1232,10 +1281,13 @@ class SimstockQGIS:
         self.user_cwd = self.dlg.mQgsFileWidget.filePath()
 
         # Check path provided
-        if self.user_cwd == "":
-            raise FileNotFoundError("Please enter a directory.")
         if not os.path.exists(self.user_cwd):
-            raise FileNotFoundError("The selected directory does not exist - please create it if necessary.")
+            print("The selected cwd does not exist - please create it if necessary.")
+            self.iface.messageBar().pushMessage("Selected cwd does not exist",
+                        "The selected cwd does not exist - please create it if necessary.",
+                        level=Qgis.Critical,
+                        duration=5)
+            return
         
         # Set abspath after checks
         self.user_cwd = os.path.abspath(self.user_cwd)
@@ -1265,6 +1317,10 @@ class SimstockQGIS:
         
         self.cwd_set = True
         print("Current working directory set to: ", self.user_cwd)
+        self.iface.messageBar().pushMessage("CWD set",
+                                           f"Current working directory set to: {self.user_cwd}",
+                                           level=Qgis.Info,
+                                           duration=5)
 
 
 
