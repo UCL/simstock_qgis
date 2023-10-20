@@ -682,10 +682,11 @@ class SimstockQGIS:
 
 
 
-    def push_msg(self, title, text, qgislevel=Qgis.Critical, duration=None):
+    def push_msg(self, title, text, qgislevel=Qgis.Critical, printout=True, duration=None):
         """Pushes a message to both QGIS and the Python console."""
 
-        print(title + "\n" + text)
+        if printout:
+            print(title + "\n" + text)
 
         if duration is None:
             self.iface.messageBar().pushMessage(title,
@@ -700,7 +701,19 @@ class SimstockQGIS:
 
 
     def run_plugin(self):
+        """
+        This calls all the main functions for the full Simstock plugin process. Overview:
+            - Sets up the basic_settings.idf
+            - Extracts polygons and input data
+            - Performs data checks
+            - Saves data to csv
+            - Runs Simstock pre-processing and idf geometry scripts
+            - Runs EnergyPlus on generated idfs and retrieves simulation results
+            - Adds results to a new layer and pushes this back to the QGIS session
+        """
+        
         # Check if initial setup worked
+        # TODO: add a check instead which verifies if everything is in place for Simstock to work
         if self.initial_setup_worked is not None:
             if not self.initial_setup_worked:
                 print("Warning: Initial setup previously failed - Simstock may not function correctly.")
@@ -711,104 +724,37 @@ class SimstockQGIS:
                           text="Please set the cwd before attempting to run Simstock.",
                           duration=5)
             return
-
-        # Setup basic settings idf from database materials/constructions
-        self.setup_basic_settings()
         
+
         if self.simulation_started:
             print("\nTo re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.")
-            
+        
+
         else:
-            qgis.utils.iface.messageBar().pushMessage("Simstock running...", "Simstock is currently running. Please wait...", level=Qgis.Info, duration=5)
+            # Announce start of process
+            self.iface.messageBar().pushMessage("Simstock running...",
+                                                "Simstock is currently running. Please wait...",
+                                                level=Qgis.Info,
+                                                duration=5)
             self.simulation_started = True
 
-            ### EXTRACT DATA
-            # Get layer, check exists and extract features
-            self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
-            if self.selectedLayer is None:
-                raise RuntimeError("Layer does not exist.")
-            if not isinstance(self.selectedLayer, QgsVectorLayer):
-                raise TypeError("Simstock expects a Vector Layer as input.")
-            if not self.selectedLayer.isSpatial():
-                raise TypeError("Layer has no geometry.")
-            
-            self.features = [feature for feature in self.selectedLayer.getFeatures()]
-            
-            # Path to qgz file
-            path_to_file = QgsProject.instance().absoluteFilePath()
-            
-            # Extract geometry data from layer as polygons
-            polygon = [feature.geometry().asWkt() for feature in self.features]
-            
-            # Extract all other required Simstock data from layer
-            headings = [heading.split("-")[0] for heading in self.headings]
-            dfdict = {}
-            dfdict[headings[0]] = polygon
-            for heading in headings[1:]:
-                try:
-                    dfdict[heading] = [feature[heading] for feature in self.features]
+            # Setup basic settings idf from database materials/constructions
+            self.setup_basic_settings()
 
-                except KeyError:
-                    print(f"Field '{heading}' was not found in the attribute table.\n"
-                           "Use 'Add Fields' to add the required Simstock fields to the layer.")
-                    self.iface.messageBar().pushMessage(f"Field '{heading}' not found",
-                                    "Use 'Add Fields' to add the required Simstock fields to the layer.",
-                                    level=Qgis.Critical)
-                    return
-                    # TODO: If layers are saved as shapefile, the field names can be shortened due to 
-                    #       a character limit. Include a warning. Should the field names be shortened?
+            # Extract polygons and data from attribute table for the selected layer
+            dfdict = self.extract_data()
+            if dfdict is None:
+                return
 
+            # Attribute table input data checks
+            self.data_checks(dfdict)
 
-            # Data checks
-            # Check values which are required for all polygons
-            for y, value in enumerate(dfdict["shading"]):
-                if isinstance(value, str) and value.lower() not in ["false", "true"]:
-                    raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Received: '%s' for %s." % (value, dfdict["UID"][y]))
-                if isinstance(value, QVariant):
-                    raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Check value for %s." % dfdict["UID"][y])
-                if isinstance(dfdict["height"][y], QVariant):
-                    raise ValueError("Check 'height' value for %s." % dfdict["UID"][y])
-                if dfdict["height"][y] == 0:
-                    raise ValueError("Height value for %s is zero." % dfdict["UID"][y])
-                if dfdict["UID"][y] == "":
-                    raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
-            
-            # TODO: change shading field type to bool?
-            if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0] == "true":
-                raise ValueError("Polygons cannot all be shading! Ensure that some are set to 'false'.")
-
-            # Check values which are required for only non-shading polygons
-            for y, value in enumerate(dfdict["shading"]):
-                if str(value).lower() == "false":
-                    if isinstance(dfdict["wwr"][y], QVariant):
-                        raise ValueError("Check 'wwr' value for %s" % dfdict["UID"][y])
-                    if dfdict["construction"][y] == "":
-                        raise ValueError("Check 'construction' value for %s" % dfdict["UID"][y])
-                    if isinstance(dfdict["ventilation_rate"][y], QVariant):
-                        raise ValueError("Check 'ventilation_rate' value for %s" % dfdict["UID"][y])
-                    if isinstance(dfdict["infiltration_rate"][y], QVariant):
-                        raise ValueError("Check 'infiltration_rate' value for %s" % dfdict["UID"][y])
-                    if isinstance(dfdict["nofloors"][y], QVariant):
-                        raise ValueError("Check 'nofloors' value for %s" % dfdict["UID"][y])
-                    if dfdict["nofloors"][y] == 0:
-                        raise ValueError("Polygon %s has zero value for 'nofloors'." % dfdict["UID"][y])
-            
-            # Extract floor-specific attributes
-            max_floors = max(dfdict["nofloors"])
-            for x in range(max_floors):
-                heading = "FLOOR_{}: use".format(x+1)
-                try:
-                    dfdict[heading] = [feature[heading] for feature in self.features]
-                except KeyError:
-                    print("Could not find 'use' column(s). Assuming all zones to be 'Dwell'.\n"
-                          "To add the 'use' columns, fill out the 'nofloors' column and then use "
-                          "'Add Fields' afterwards.")
+            # Extract floor-specific attribute table input data (use columns)
+            dfdict = self.extract_floor_data(dfdict)
 
             # Save data as csv for Simstock to read
-            data = pd.DataFrame(dfdict)
-            data = data.rename(columns={"UID":"osgb"})
+            data = pd.DataFrame(dfdict).rename(columns={"UID":"osgb"})
             data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
-            
             
             
             ### SIMSTOCK
@@ -817,66 +763,13 @@ class SimstockQGIS:
             import simstocktwo as second
             first.main()
             self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
-            second.main(idf_dir = self.idf_dir)
-            
-
-            
-            ### SIMULATION
-            def run_simulation(multiprocessing = True):
-                """
-                Run E+ simulation, generate .rvi files and run ReadVarsESO
-                Outputs: a list of directories containing the results for each idf.
-                """
-                #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
-
-                # Weather file
-                self.epw_file = os.path.join(self.user_cwd, self.config["epw"])
-                if not os.path.exists(self.epw_file):
-                    print(f"Weather epw_file '{self.epw_file}' not found! "
-                           "Check that it exists in the cwd and that is spelled correctly in "
-                           "the 'config.json' file.")
-                    self.iface.messageBar().pushMessage("Weather epw file not found",
-                                    "Check that it exists in the cwd and that is spelled correctly in "
-                                    "the 'config.json' file.",
-                                    level=Qgis.Critical,
-                                    duration=10)
-                    return
-
-                # List of output directory names
-                idf_result_dirs = []
-                for idf_path in self.idf_files:
-                    idf_result_dirs.append(idf_path[:-4])
-
-                # Simulate
-                simulationscript = os.path.join(self.plugin_dir, "mptest.py")
-
-                t1 = time.time()
-                if not multiprocessing:
-                    print("Running EnergyPlus simulation on a single core...")
-                    out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd, "--singlecore"], capture_output=True, text=True)
-                else:
-                    print("Running EnergyPlus simulation on multiple cores...")
-                    out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd], capture_output=True, text=True)
-
-                if out.returncode != 0:
-                    raise RuntimeError(out.stderr)
-                    # TODO: allow continuation even if EP fails, and load NULL results for that BI
-                    # TODO: if the stderr is printed instead of raised, it is a mess - need to pass error in a better way
-                    # TODO: if fails, but old results exist, does it just use those?
-                
-                print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
-                
-                # For debugging
-                #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
-                #    f.write(str(out))# + "\n")
-                
-                #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
-                return idf_result_dirs
+            second.main(idf_dir=self.idf_dir)
             
 
             # Run E+ simulation, generate .rvi files and run ReadVarsESO
-            self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()]
-            self.idf_result_dirs = run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
+            unique_bis = self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()
+            self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in unique_bis]
+            self.idf_result_dirs = self.run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
             if self.idf_result_dirs is None:
                 return
 
@@ -886,7 +779,167 @@ class SimstockQGIS:
                                                 level=Qgis.Success,
                                                 duration=10)
 
-            
+
+
+    def extract_data(self):
+        """
+        Extracts polygons, as well as data from attribute table for the selected layer.
+
+        Raises an error if any of the required fields were not found.
+        """
+        # Get layer, check exists and extract features
+        self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
+        if self.selectedLayer is None:
+            raise RuntimeError("Layer does not exist.")
+        if not isinstance(self.selectedLayer, QgsVectorLayer):
+            raise TypeError("Simstock expects a Vector Layer as input.")
+        if not self.selectedLayer.isSpatial():
+            raise TypeError("Layer has no geometry.")
+
+        # Extract features from layer
+        self.features = [feature for feature in self.selectedLayer.getFeatures()]
+        
+        # Path to qgz file
+        path_to_file = QgsProject.instance().absoluteFilePath()
+        
+        # Extract geometry data from layer as polygons
+        polygon = [feature.geometry().asWkt() for feature in self.features]
+        
+        # Extract all other required Simstock data from layer
+        headings = [heading.split("-")[0] for heading in self.headings]
+        dfdict = {}
+        dfdict[headings[0]] = polygon
+        for heading in headings[1:]:
+            try:
+                dfdict[heading] = [feature[heading] for feature in self.features]
+
+            except KeyError:
+                print(f"Field '{heading}' was not found in the attribute table.\n"
+                        "Use 'Add Fields' to add the required Simstock fields to the layer.")
+                self.iface.messageBar().pushMessage(f"Field '{heading}' not found",
+                                "Use 'Add Fields' to add the required Simstock fields to the layer.",
+                                level=Qgis.Critical)
+                return
+                # TODO: If layers are saved as shapefile, the field names can be shortened due to 
+                #       a character limit. Include a warning. Should the field names be shortened?
+        return dfdict
+    
+
+
+    def extract_floor_data(self, dfdict):
+        """
+        Extracts floor-specific attributes, i.e. use columns.
+
+        Expects this to be in the format "FLOOR_X: use".
+        """
+        max_floors = max(dfdict["nofloors"])
+        for x in range(max_floors):
+            heading = f"FLOOR_{x+1}: use"
+            try:
+                dfdict[heading] = [feature[heading] for feature in self.features]
+            except KeyError:
+                print("Could not find 'use' column(s). Assuming all zones to be 'Dwell'.\n"
+                      "To add the 'use' columns, fill out the 'nofloors' column and then use "
+                      "'Add Fields' afterwards.")
+        return dfdict
+
+
+
+    @staticmethod
+    def data_checks(dfdict):
+        """
+        Verifies that the input values in the attribute table are valid for the operation of Simstock.
+
+        Raises errors to inform the user on changes that need to be made.
+        """
+        # Check values which are required for all polygons
+        for y, value in enumerate(dfdict["shading"]):
+            if isinstance(value, str) and value.lower() not in ["false", "true"]:
+                raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Received: '%s' for %s." % (value, dfdict["UID"][y]))
+            if isinstance(value, QVariant):
+                raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Check value for %s." % dfdict["UID"][y])
+            if isinstance(dfdict["height"][y], QVariant):
+                raise ValueError("Check 'height' value for %s." % dfdict["UID"][y])
+            if dfdict["height"][y] == 0:
+                raise ValueError("Height value for %s is zero." % dfdict["UID"][y])
+            if dfdict["UID"][y] == "":
+                raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
+        
+        # TODO: change shading field type to bool?
+        if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0] == "true":
+            raise ValueError("Polygons cannot all be shading! Ensure that some are set to 'false'.")
+
+        # Check values which are required for only non-shading polygons
+        for y, value in enumerate(dfdict["shading"]):
+            if str(value).lower() == "false":
+                if isinstance(dfdict["wwr"][y], QVariant):
+                    raise ValueError("Check 'wwr' value for %s" % dfdict["UID"][y])
+                if dfdict["construction"][y] == "":
+                    raise ValueError("Check 'construction' value for %s" % dfdict["UID"][y])
+                if isinstance(dfdict["ventilation_rate"][y], QVariant):
+                    raise ValueError("Check 'ventilation_rate' value for %s" % dfdict["UID"][y])
+                if isinstance(dfdict["infiltration_rate"][y], QVariant):
+                    raise ValueError("Check 'infiltration_rate' value for %s" % dfdict["UID"][y])
+                if isinstance(dfdict["nofloors"][y], QVariant):
+                    raise ValueError("Check 'nofloors' value for %s" % dfdict["UID"][y])
+                if dfdict["nofloors"][y] == 0:
+                    raise ValueError("Polygon %s has zero value for 'nofloors'." % dfdict["UID"][y])
+
+
+
+    def run_simulation(self, multiprocessing = True):
+        """
+        Run E+ simulation, generate .rvi files and run ReadVarsESO
+        Outputs: a list of directories containing the results for each idf.
+        """
+        #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
+
+        # Weather file
+        self.epw_file = os.path.join(self.user_cwd, self.config["epw"])
+        if not os.path.exists(self.epw_file):
+            print(f"Weather epw_file '{self.epw_file}' not found! "
+                    "Check that it exists in the cwd and that is spelled correctly in "
+                    "the 'config.json' file.")
+            self.iface.messageBar().pushMessage("Weather epw file not found",
+                            "Check that it exists in the cwd and that is spelled correctly in "
+                            "the 'config.json' file.",
+                            level=Qgis.Critical,
+                            duration=10)
+            return
+
+        # List of output directory names
+        idf_result_dirs = []
+        for idf_path in self.idf_files:
+            idf_result_dirs.append(idf_path[:-4])
+
+        # Simulate
+        simulationscript = os.path.join(self.plugin_dir, "mptest.py")
+
+        t1 = time.time()
+        if not multiprocessing:
+            print("Running EnergyPlus simulation on a single core...")
+            out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd, "--singlecore"], capture_output=True, text=True)
+        else:
+            print("Running EnergyPlus simulation on multiple cores...")
+            out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd], capture_output=True, text=True)
+
+        if out.returncode != 0:
+            raise RuntimeError(out.stderr)
+            # TODO: allow continuation even if EP fails, and load NULL results for that BI
+            # TODO: if the stderr is printed instead of raised, it is a mess - need to pass error in a better way
+            # TODO: if fails, but old results exist, does it just use those?
+        
+        print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
+        
+        # For debugging
+        #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
+        #    f.write(str(out))# + "\n")
+        
+        #qgis.utils.iface.messageBar().pushMessage("EnergyPlus finished", "EnergyPlus simulation has completed successfully.", level=Qgis.Success)
+        return idf_result_dirs
+
+
+
     ### RESULTS HANDLING
     def add_new_layer(self, results_mode=True):
         """
