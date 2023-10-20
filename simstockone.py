@@ -86,7 +86,9 @@ def main():
     # Raise error if BIs were not properly resolved
     if len(newdf["bi"]) != len(newdf["bi"].dropna()):
         raise Exception("Simstock was unable to resolve all built islands. "
-                        "It is likely that intersections are present.")
+                        "It is likely that intersections are present.\n"
+                        "The problem polygons include (but may not be limited to): "
+                        f"{newdf[newdf['bi'].isna()]['osgb'].to_numpy()}")
 
     pt('##### preprocessing completed in:', start)
 
