@@ -424,9 +424,9 @@ class SimstockQGIS:
                 # Get user's permission before downloading EnergyPlus
                 self.ask_permission()
                 if self.permission == "n":
-                    print("User permission not granted to download EnergyPlus.")
+                    self.push_msg("Initial setup failed","User permission not granted to download EnergyPlus.", duration=20)
                     self.initial_tests_warnings.append("User permission not granted to download EnergyPlus.")
-                    # TODO: this fails at extraction step - should raise a more useful error
+                    return
 
                 elif self.permission == "y":
                     print("User permission granted to download EnergyPlus.")
@@ -624,9 +624,10 @@ class SimstockQGIS:
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
             # TODO: print errors in QGIS console message if possible
-            self.iface.messageBar().pushMessage("Initial setup failed",
-                                                "Some errors have occured - please check the Python console outputs.",
-                                                level=Qgis.Critical)
+            self.push_msg("Initial setup failed",
+                          "Some errors have occured - please check the Python console outputs.",
+                          qgislevel=Qgis.Critical,
+                          printout=False)
             self.initial_setup_worked = False
 
             # Print errors to Python console
@@ -640,10 +641,10 @@ class SimstockQGIS:
 
         else:
             self.initial_setup_worked = True
-            qgis.utils.iface.messageBar().pushMessage("Initial setup complete",
-                                                      "Initial setup completed successfully. Please restart QGIS.",
-                                                      level=Qgis.Success)
-            print("\nInitial setup completed successfully. Please restart QGIS.")
+            self.push_msg("Initial setup complete",
+                          "Initial setup completed successfully. Please restart QGIS.",
+                          qgislevel=Qgis.Success,
+                          duration=20)
 
             # Delete test files
             if os.path.exists(shoebox_output):
@@ -686,7 +687,7 @@ class SimstockQGIS:
         """Pushes a message to both QGIS and the Python console."""
 
         if printout:
-            print(title + "\n" + text)
+            print(title + ": " + text)
 
         if duration is None:
             self.iface.messageBar().pushMessage(title,
@@ -727,29 +728,36 @@ class SimstockQGIS:
         
 
         if self.simulation_started:
-            print("\nTo re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.")
+            print("To re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.")
         
 
         else:
             # Announce start of process
-            self.iface.messageBar().pushMessage("Simstock running...",
-                                                "Simstock is currently running. Please wait...",
-                                                level=Qgis.Info,
-                                                duration=5)
+            self.push_msg("Simstock running",
+                          "Simstock is currently running. Please wait...",
+                          qgislevel=Qgis.Info,
+                          duration=5)
             self.simulation_started = True
 
-            # Setup basic settings idf from database materials/constructions
+
+            ### BASIC SETTINGS
+            # Set up basic settings idf from database materials/constructions
             self.setup_basic_settings()
 
+
+            ### INPUT DATA
             # Extract polygons and data from attribute table for the selected layer
             dfdict = self.extract_data()
             if dfdict is None:
                 return
 
             # Attribute table input data checks
-            self.data_checks(dfdict)
+            dc_message = self.data_checks(dfdict)
+            if dc_message is not None:
+                self.push_msg("Input data problem", dc_message)
+                return
 
-            # Extract floor-specific attribute table input data (use columns)
+            # Extract floor-specific attribute table input data (use columns) if they exist
             dfdict = self.extract_floor_data(dfdict)
 
             # Save data as csv for Simstock to read
@@ -766,6 +774,7 @@ class SimstockQGIS:
             second.main(idf_dir=self.idf_dir)
             
 
+            ### ENERGYPLUS
             # Run E+ simulation, generate .rvi files and run ReadVarsESO
             unique_bis = self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()
             self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in unique_bis]
@@ -773,11 +782,14 @@ class SimstockQGIS:
             if self.idf_result_dirs is None:
                 return
 
+
+            ### RESULTS
             # Push the results to a new QGIS layer
             self.add_new_layer(results_mode=True)
-            self.iface.messageBar().pushMessage("Simstock completed", "Simstock has completed successfully.",
-                                                level=Qgis.Success,
-                                                duration=10)
+            self.push_msg("Simstock completed",
+                          "Simstock has completed successfully.",
+                          qgislevel=Qgis.Success,
+                          duration=10)
 
 
 
@@ -787,14 +799,19 @@ class SimstockQGIS:
 
         Raises an error if any of the required fields were not found.
         """
-        # Get layer, check exists and extract features
+        # Get layer, check exists and format
         self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
         if self.selectedLayer is None:
-            raise RuntimeError("Layer does not exist.")
+            self.push_msg("Layer does not exist.", "")
+            return
         if not isinstance(self.selectedLayer, QgsVectorLayer):
-            raise TypeError("Simstock expects a Vector Layer as input.")
+            self.push_msg("Simstock expects a Vector Layer as input.",
+                         f"'{self.selectedLayer.name()}' is not a vector layer.")
+            return
         if not self.selectedLayer.isSpatial():
-            raise TypeError("Layer has no geometry.")
+            self.push_msg("Layer has no geometry.",
+                         f"'{self.selectedLayer.name()}' has no geometry.")
+            return
 
         # Extract features from layer
         self.features = [feature for feature in self.selectedLayer.getFeatures()]
@@ -814,11 +831,8 @@ class SimstockQGIS:
                 dfdict[heading] = [feature[heading] for feature in self.features]
 
             except KeyError:
-                print(f"Field '{heading}' was not found in the attribute table.\n"
-                        "Use 'Add Fields' to add the required Simstock fields to the layer.")
-                self.iface.messageBar().pushMessage(f"Field '{heading}' not found",
-                                "Use 'Add Fields' to add the required Simstock fields to the layer.",
-                                level=Qgis.Critical)
+                self.push_msg(f"Field '{heading}' not found in the attribute table",
+                               "Use 'Add Fields' to add the required Simstock fields to the layer.")
                 return
                 # TODO: If layers are saved as shapefile, the field names can be shortened due to 
                 #       a character limit. Include a warning. Should the field names be shortened?
@@ -845,45 +859,50 @@ class SimstockQGIS:
 
 
 
-    @staticmethod
-    def data_checks(dfdict):
+    def data_checks(self, dfdict):
         """
         Verifies that the input values in the attribute table are valid for the operation of Simstock.
 
-        Raises errors to inform the user on changes that need to be made.
+        Returns:
+            - None if all checks pass.
+            - If a check fails, it returns a message string containing info on changes that need to 
+              be made - this can be pushed to the user.
         """
+
         # Check values which are required for all polygons
         for y, value in enumerate(dfdict["shading"]):
             if isinstance(value, str) and value.lower() not in ["false", "true"]:
-                raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Received: '%s' for %s." % (value, dfdict["UID"][y]))
+                return (f"Values in the 'shading' field should be 'true' or 'false'.\nReceived: '{value}' for {dfdict['UID'][y]}.")
             if isinstance(value, QVariant):
-                raise ValueError("Values in the 'shading' field should be 'true' or 'false'.\n Check value for %s." % dfdict["UID"][y])
+                return (f"Values in the 'shading' field should be 'true' or 'false'.\nCheck value for {dfdict['UID'][y]}.")
             if isinstance(dfdict["height"][y], QVariant):
-                raise ValueError("Check 'height' value for %s." % dfdict["UID"][y])
+                return (f"Check 'height' value for {dfdict['UID'][y]}.")
             if dfdict["height"][y] == 0:
-                raise ValueError("Height value for %s is zero." % dfdict["UID"][y])
+                return (f"Height value for {dfdict['UID'][y]} is zero.")
             if dfdict["UID"][y] == "":
-                raise ValueError("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
+                return ("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
         
         # TODO: change shading field type to bool?
         if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0] == "true":
-            raise ValueError("Polygons cannot all be shading! Ensure that some are set to 'false'.")
+            return ("Polygons cannot all be shading! Ensure that some are set to 'false'.")
 
         # Check values which are required for only non-shading polygons
         for y, value in enumerate(dfdict["shading"]):
             if str(value).lower() == "false":
                 if isinstance(dfdict["wwr"][y], QVariant):
-                    raise ValueError("Check 'wwr' value for %s" % dfdict["UID"][y])
+                    return (f"Check 'wwr' value for {dfdict['UID'][y]}")
                 if dfdict["construction"][y] == "":
-                    raise ValueError("Check 'construction' value for %s" % dfdict["UID"][y])
+                    return (f"Check 'construction' value for {dfdict['UID'][y]}")
                 if isinstance(dfdict["ventilation_rate"][y], QVariant):
-                    raise ValueError("Check 'ventilation_rate' value for %s" % dfdict["UID"][y])
+                    return (f"Check 'ventilation_rate' value for {dfdict['UID'][y]}")
                 if isinstance(dfdict["infiltration_rate"][y], QVariant):
-                    raise ValueError("Check 'infiltration_rate' value for %s" % dfdict["UID"][y])
+                    return (f"Check 'infiltration_rate' value for {dfdict['UID'][y]}")
                 if isinstance(dfdict["nofloors"][y], QVariant):
-                    raise ValueError("Check 'nofloors' value for %s" % dfdict["UID"][y])
+                    return (f"Check 'nofloors' value for {dfdict['UID'][y]}")
                 if dfdict["nofloors"][y] == 0:
-                    raise ValueError("Polygon %s has zero value for 'nofloors'." % dfdict["UID"][y])
+                    return (f"Polygon {dfdict['UID'][y]} has zero value for 'nofloors'.")
+                
+        return
 
 
 
