@@ -241,9 +241,7 @@ class SimstockQGIS:
         
         # Various check trackers
         self.initial_setup_worked = None #check if initial setup worked
-        self.simulation_started = False #check if the run button was pressed
         self.cwd_set = False #check if the user set the cwd
-        self.added_fields = False #check if Add Fields has already been used
         
         # Startup E+ stuff
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
@@ -303,16 +301,16 @@ class SimstockQGIS:
         if self.first_start == True:
             self.first_start = False
             self.dlg = SimstockQGISDialog()
+            
+            # Check if the buttons were clicked and run function if so
+            self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
+            self.dlg.pbRunSim.clicked.connect(self.run_plugin)
+            self.dlg.pbOptions.clicked.connect(self.add_fields)
+            self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
+            self.dlg.label_4.linkActivated.connect(self.open_config)
 
         # show the dialog
         self.dlg.show()
-        
-        # Check if the buttons were clicked and run function if so
-        self.dlg.pbInitialSetup.clicked.connect(self.initial_setup)
-        self.dlg.pbRunSim.clicked.connect(self.run_plugin)
-        self.dlg.pbOptions.clicked.connect(self.add_fields)
-        self.dlg.pbSetcwd.clicked.connect(self.set_cwd)
-        self.dlg.label_4.linkActivated.connect(self.open_config)
         
         # Run the dialog event loop
         result = self.dlg.exec_()
@@ -673,13 +671,8 @@ class SimstockQGIS:
 
     def add_fields(self):
         """Allows results_mode=False to be passed to add_new_layer()."""
-        
-        # Check if Add Fields has already been used
-        if not self.added_fields:
-            self.added_fields = True
-            self.add_new_layer(results_mode=False)
-        else:
-            print("Please reload the plugin if 'Add Fields' needs to be used again.")
+
+        self.add_new_layer(results_mode=False)
 
 
 
@@ -726,70 +719,63 @@ class SimstockQGIS:
                           duration=5)
             return
         
+        # Announce start of process
+        self.push_msg("Simstock running",
+                        "Simstock is currently running. Please wait...",
+                        qgislevel=Qgis.Info,
+                        duration=5)
+        self.simulation_started = True
 
-        if self.simulation_started:
-            print("To re-run the simulations, please close any open plugin windows and refresh the plugin using the reloader.")
+
+        ### BASIC SETTINGS
+        # Set up basic settings idf from database materials/constructions
+        self.setup_basic_settings()
+
+
+        ### INPUT DATA
+        # Extract polygons and data from attribute table for the selected layer
+        dfdict = self.extract_data()
+        if dfdict is None:
+            return
+
+        # Attribute table input data checks
+        dc_message = self.data_checks(dfdict)
+        if dc_message is not None:
+            self.push_msg("Input data problem", dc_message)
+            return
+
+        # Extract floor-specific attribute table input data (use columns) if they exist
+        dfdict = self.extract_floor_data(dfdict)
+
+        # Save data as csv for Simstock to read
+        data = pd.DataFrame(dfdict).rename(columns={"UID":"osgb"})
+        data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
+        
+        
+        ### SIMSTOCK
+        # Import and run Simstock
+        import simstockone as first
+        import simstocktwo as second
+        first.main()
+        self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
+        second.main(idf_dir=self.idf_dir)
         
 
-        else:
-            # Announce start of process
-            self.push_msg("Simstock running",
-                          "Simstock is currently running. Please wait...",
-                          qgislevel=Qgis.Info,
-                          duration=5)
-            self.simulation_started = True
+        ### ENERGYPLUS
+        # Run E+ simulation, generate .rvi files and run ReadVarsESO
+        unique_bis = self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()
+        self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in unique_bis]
+        self.idf_result_dirs = self.run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
+        if self.idf_result_dirs is None:
+            return
 
 
-            ### BASIC SETTINGS
-            # Set up basic settings idf from database materials/constructions
-            self.setup_basic_settings()
-
-
-            ### INPUT DATA
-            # Extract polygons and data from attribute table for the selected layer
-            dfdict = self.extract_data()
-            if dfdict is None:
-                return
-
-            # Attribute table input data checks
-            dc_message = self.data_checks(dfdict)
-            if dc_message is not None:
-                self.push_msg("Input data problem", dc_message)
-                return
-
-            # Extract floor-specific attribute table input data (use columns) if they exist
-            dfdict = self.extract_floor_data(dfdict)
-
-            # Save data as csv for Simstock to read
-            data = pd.DataFrame(dfdict).rename(columns={"UID":"osgb"})
-            data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
-            
-            
-            ### SIMSTOCK
-            # Import and run Simstock
-            import simstockone as first
-            import simstocktwo as second
-            first.main()
-            self.preprocessed_df = pd.read_csv(os.path.join(self.plugin_dir, "sa_preprocessed.csv"))
-            second.main(idf_dir=self.idf_dir)
-            
-
-            ### ENERGYPLUS
-            # Run E+ simulation, generate .rvi files and run ReadVarsESO
-            unique_bis = self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()
-            self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in unique_bis]
-            self.idf_result_dirs = self.run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
-            if self.idf_result_dirs is None:
-                return
-
-
-            ### RESULTS
-            # Push the results to a new QGIS layer
-            self.add_new_layer(results_mode=True)
-            self.push_msg("Simstock completed",
-                          "Simstock has completed successfully.",
-                          qgislevel=Qgis.Success,
-                          duration=10)
+        ### RESULTS
+        # Push the results to a new QGIS layer
+        self.add_new_layer(results_mode=True)
+        self.push_msg("Simstock completed",
+                      "Simstock has completed successfully.",
+                      qgislevel=Qgis.Success)
 
 
 
@@ -1354,11 +1340,9 @@ class SimstockQGIS:
 
         # Check path provided
         if not os.path.exists(self.user_cwd):
-            print("The selected cwd does not exist - please create it if necessary.")
-            self.iface.messageBar().pushMessage("Selected cwd does not exist",
-                        "The selected cwd does not exist - please create it if necessary.",
-                        level=Qgis.Critical,
-                        duration=5)
+            self.push_msg("Selected cwd does not exist",
+                          "The selected cwd does not exist - please create the directory if necessary.",
+                          duration=10)
             return
         
         # Set abspath after checks
@@ -1388,11 +1372,10 @@ class SimstockQGIS:
             self.load_database(file_exists=False)
         
         self.cwd_set = True
-        print("Current working directory set to: ", self.user_cwd)
-        self.iface.messageBar().pushMessage("CWD set",
-                                           f"Current working directory set to: {self.user_cwd}",
-                                           level=Qgis.Info,
-                                           duration=5)
+        self.push_msg("CWD set",
+                     f"Current working directory (cwd) set to: {self.user_cwd}",
+                      qgislevel=Qgis.Info,
+                      duration=8)
 
 
 
