@@ -1,8 +1,8 @@
 [general]
 name=Simstock QGIS
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.16
 description=Allows urban building energy models to be created and simulated within QGIS
-version=0.1
+version=0.1.2
 author=UCL
 email=shyam.amrith.14@ucl.ac.uk
 
