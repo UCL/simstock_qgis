@@ -53,6 +53,7 @@ def main(idf_dir):
           flush=True)
     print(strftime('%d/%m/%Y %H:%M:%S', localtime()),
           '- {} start time'.format(os.path.basename(__file__)), flush=True)
+    logging.info("Simstock idf geometry started")
 
     # Find the computer's operating system and set path to E+ idd file
     system = platform.system().lower()
@@ -189,10 +190,6 @@ def main(idf_dir):
 
         # Get the data for other BIs to use as shading
         rest  = df[df['bi'] != bi]
-
-        # Load config file
-        with open(os.path.join(ROOT_DIR, "config.json"), "r") as read_file:
-            config = json.load(read_file)
 
         # Shading buffer with specified radius
         buffer_radius = float(config["Shading buffer radius - m"])

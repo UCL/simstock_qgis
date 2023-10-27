@@ -22,6 +22,7 @@ from shapely.ops import unary_union, linemerge
 from shapely.wkt import loads, dumps
 from time import time, localtime, strftime
 from shapely.geometry import Polygon, LineString, MultiLineString, LinearRing, MultiPolygon
+import logging
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -35,6 +36,7 @@ def main():
           flush=True)
     print(strftime('%d/%m/%Y %H:%M:%S', localtime()),
           '- {} start time'.format(os.path.basename(__file__)), flush=True)
+    logging.info("Simstock preprocessing started")
 
     # Load the raw data into pandas dataframe
     df = pd.read_csv(os.path.join(ROOT_DIR, 'sa_data.csv'), dtype={'construction':str})

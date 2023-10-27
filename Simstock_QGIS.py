@@ -50,6 +50,9 @@ import shutil
 import numpy as np
 import json
 from zipfile import ZipFile
+import logging
+from logging.handlers import RotatingFileHandler
+import warnings
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -234,6 +237,17 @@ class SimstockQGIS:
         ### CUSTOM ADDITIONS
         # Update path to access Simstock scripts
         sys.path.insert(0, self.plugin_dir)
+
+        # Initialise log
+        logfile = os.path.join(self.plugin_dir, "log.log")
+        logging.basicConfig(handlers=[RotatingFileHandler(logfile, maxBytes=100*1024*1024, backupCount=2)],
+                            format="%(asctime)s - %(name)s - %(levelname)s - %(filename)s - %(funcName)s - %(message)s",
+                            datefmt="%Y-%m-%d %H:%M:%S",
+                            level=logging.INFO)
+        
+        # Supress Eppy warnings which can confuse the user that something has gone wrong
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        warnings.filterwarnings("ignore", category=ResourceWarning)
         
         # Update path to packaged eppy
         self.eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
@@ -424,10 +438,12 @@ class SimstockQGIS:
                 if self.permission == "n":
                     self.push_msg("Initial setup failed","User permission not granted to download EnergyPlus.", duration=20)
                     self.initial_tests_warnings.append("User permission not granted to download EnergyPlus.")
+                    logging.warning("User permission not granted to download EnergyPlus.")
                     return
 
                 elif self.permission == "y":
                     print("User permission granted to download EnergyPlus.")
+                    logging.info("User permission granted to download EnergyPlus.")
                     import requests
 
                     # Download EnergyPlus if permission given
@@ -470,6 +486,7 @@ class SimstockQGIS:
 
                 # Clean up if all files were located
                 if all(clean_up.values()):
+                    logging.info("All required EP files found")
                     os.remove(EP_zipfile)
                     to_delete = ["ExampleFiles", "PreProcess", "Documentation", "DataSets", "PostProcess", "WeatherData"]
                     for fdir in to_delete:
@@ -479,7 +496,9 @@ class SimstockQGIS:
                             pass
                 else:
                     not_found = [key for key, value in clean_up.items() if not value]
-                    self.initial_tests.append(f"Could not locate: {', '.join(not_found)}")
+                    msg = f"Could not locate: {', '.join(not_found)}"
+                    self.initial_tests.append(msg)
+                    logging.critical(msg)
 
             if ep_source == "user":
                 pass
@@ -621,12 +640,12 @@ class SimstockQGIS:
 
         # Check if any tests failed and report these if necessary
         if len(self.initial_tests) != 0:
-            # TODO: print errors in QGIS console message if possible
+            self.initial_setup_worked = False
             self.push_msg("Initial setup failed",
                           "Some errors have occured - please check the Python console outputs.",
                           qgislevel=Qgis.Critical,
                           printout=False)
-            self.initial_setup_worked = False
+            logging.critical(f"Initial setup failed:\n{self.initial_tests}\n{self.initial_tests_warnings}")
 
             # Print errors to Python console
             print("\nERRORS:")
@@ -643,6 +662,7 @@ class SimstockQGIS:
                           "Initial setup completed successfully. Please restart QGIS.",
                           qgislevel=Qgis.Success,
                           duration=20)
+            logging.info("Initial setup completed successfully")
 
             # Delete test files
             if os.path.exists(shoebox_output):
@@ -685,7 +705,8 @@ class SimstockQGIS:
         if duration is None:
             self.iface.messageBar().pushMessage(title,
                                                 text,
-                                                level=qgislevel)
+                                                level=qgislevel,
+                                                duration=-1)
         else:
             self.iface.messageBar().pushMessage(title,
                                                 text, 
@@ -724,7 +745,7 @@ class SimstockQGIS:
                         "Simstock is currently running. Please wait...",
                         qgislevel=Qgis.Info,
                         duration=5)
-        self.simulation_started = True
+        logging.info("Plugin process started")
 
 
         ### BASIC SETTINGS
@@ -742,6 +763,7 @@ class SimstockQGIS:
         dc_message = self.data_checks(dfdict)
         if dc_message is not None:
             self.push_msg("Input data problem", dc_message)
+            logging.critical(f"Input data problem: {dc_message}")
             return
 
         # Extract floor-specific attribute table input data (use columns) if they exist
@@ -775,7 +797,9 @@ class SimstockQGIS:
         self.add_new_layer(results_mode=True)
         self.push_msg("Simstock completed",
                       "Simstock has completed successfully.",
-                      qgislevel=Qgis.Success)
+                      qgislevel=Qgis.Success,
+                      duration=0)
+        logging.info("Simstock completed successfully\n")
 
 
 
@@ -819,9 +843,12 @@ class SimstockQGIS:
             except KeyError:
                 self.push_msg(f"Field '{heading}' not found in the attribute table",
                                "Use 'Add Fields' to add the required Simstock fields to the layer.")
+                logging.critical(f"Field '{heading}' not found in the attribute table")
                 return
                 # TODO: If layers are saved as shapefile, the field names can be shortened due to 
                 #       a character limit. Include a warning. Should the field names be shortened?
+        
+        logging.info(f"Extracted data from layer '{self.selectedLayer.name()}'")
         return dfdict
     
 
@@ -922,19 +949,24 @@ class SimstockQGIS:
 
         t1 = time.time()
         if not multiprocessing:
-            print("Running EnergyPlus simulation on a single core...")
+            print("Running EnergyPlus simulations on a single core...")
+            logging.info("Running EnergyPlus simulations on a single core...")
             out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd, "--singlecore"], capture_output=True, text=True)
         else:
-            print("Running EnergyPlus simulation on multiple cores...")
+            print("Running EnergyPlus simulations on multiple cores...")
+            logging.info("Running EnergyPlus simulations on multiple cores...")
             out = subprocess.run([self.qgis_python_location, simulationscript, self.user_cwd], capture_output=True, text=True)
 
         if out.returncode != 0:
+            logging.critical(f"EnergyPlus failed: {out.stderr}")
             raise RuntimeError(out.stderr)
             # TODO: allow continuation even if EP fails, and load NULL results for that BI
             # TODO: if the stderr is printed instead of raised, it is a mess - need to pass error in a better way
             # TODO: if fails, but old results exist, does it just use those?
         
-        print(f"Simulation completed: took {round(time.time()-t1, 2)}s")
+        t = round(time.time()-t1, 2)
+        print(f"EnergyPlus simulation completed: took {t}s")
+        logging.info(f"EnergyPlus simulation completed: took {t}s")
         
         # For debugging
         #with open(os.path.join(self.plugin_dir, "append1.txt"), "a") as f:
@@ -1108,6 +1140,7 @@ class SimstockQGIS:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
                     print(f"Retrieving results for '{osgb}'...")
+                    logging.info(f"Retrieving results for '{osgb}'...")
 
                     # Find the BI ref
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
@@ -1124,7 +1157,7 @@ class SimstockQGIS:
                             # Check the order is correct
                             print(f"    Found results for floor {j+1}: '{zone}'")
                             if zone[-1] != str(j+1):
-                                print(f"Floor results are in the wrong order for zone '{zone}'.")
+                                logging.warning(f"Floor results are in the wrong order for zone '{zone}'.")
 
                             # Collect the results for the thermal zone
                             result_vals.extend(extracted_results[zone])
@@ -1172,6 +1205,7 @@ class SimstockQGIS:
 
         # Set name for new layer to be created
         if results_mode:
+            logging.info("Started results processing")
             if self.HeatCool.lower() == "false":
                 new_layer_name = self.selectedLayer.name() + "_Simstock-results_HC-Off"
             elif self.HeatCool.lower() == "true":
