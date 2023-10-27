@@ -26,6 +26,8 @@ from time import time, localtime, strftime
 from shapely.geometry import LineString, MultiLineString
 from shapely.ops import unary_union
 import json
+from eppy.bunch_subclass import BadEPFieldError
+import logging
 
 
 ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -64,6 +66,10 @@ def main(idf_dir):
 
     # Load input data (preprocessing outputs)
     df = pd.read_csv(input_data, dtype={'construction':str})
+
+    # Load config file
+    with open(os.path.join(ROOT_DIR, "config.json"), "r") as read_file:
+        config = json.load(read_file)
     
     # Function which creates the idf(s)
     def createidfs(bi_df, df, mode):
@@ -258,8 +264,14 @@ def mixed_use(idf, zone_use_dict):
                 'ZONECONTROL:THERMOSTAT']:
         objects = idf.idfobjects[obj]
         for item in objects:
-            if item.Zone_or_ZoneList_Name.lower() not in use_list:
-                objects_to_delete.append(item)
+            try:
+                if item.Zone_or_ZoneList_Name.lower() not in use_list:
+                    objects_to_delete.append(item)
+
+            # Newer versions of E+ use this alternate attribute for some but not all objects
+            except BadEPFieldError:
+                if item.Zone_or_ZoneList_or_Space_or_SpaceList_Name.lower() not in use_list:
+                    objects_to_delete.append(item)
 
     for item in objects_to_delete:
         idf.removeidfobject(item)
@@ -470,9 +482,9 @@ def polygon_with_holes(coordinates_dictionary):
                 # which is the same as the last ordered pair of the second
                 # LineString)
                 if hole.geom_type == 'MultiLineString':
-                    for coord in hole[1].coords:
+                    for coord in hole.geoms[1].coords:
                         coordinates.append(coord)
-                    for coord in hole[0].coords[1:]:
+                    for coord in hole.geoms[0].coords[1:]:
                         coordinates.append(coord)
                 # Close the coordinates by adding the first outer ring
                 # LineStings's ordered pair
@@ -597,7 +609,7 @@ def polygon_with_holes(coordinates_dictionary):
     # ordered pair of outer ring coordinate list
     elif outer_ring.geom_type == 'MultiLineString':
         # Loop through LineString in a MultiLineString
-        for i, linestring in enumerate(outer_ring):
+        for i, linestring in enumerate(outer_ring.geoms):
             # First and last ordered pair of polygon with holes coordinates is
             # the first coordinate of the first LineString
             if i == 0:
@@ -848,6 +860,51 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
     construction = row.construction
     glazing_const = row.glazing_const
+
+    # def zone_use(row, zone_name, zone_use_dict, floor_no):
+    #     """
+    #     - Records the zone use in zone_use_dict
+    #     - Applies "Dwell" use if none specified
+    #     - Returns the zone use
+    #     """
+    #     try:
+    #         # Find use value if column exists
+    #         use = row["floor_{}_use".format(floor_no)]
+    #         zone_use_dict[zone_name] = use
+    #         # Check that the value is not blank
+    #         if isinstance(use, float) and math.isnan(use):
+    #             # Give the "Dwell" use if use value is not present
+    #             zone_use_dict[zone_name] = "Dwell"
+    #     except KeyError:
+    #         # Give the "Dwell" use if use column is not present
+    #         zone_use_dict[zone_name] = "Dwell"
+    #     return zone_use_dict[zone_name]
+
+    # def adiabatic_for_shading(row, space_below_floor, space_above_floor):
+    #     """
+    #     Checks if the zone below/above is shading. Returns "shading" str if so,
+    #     since the name of the zone below/above is only needed to create non-adiabatic
+    #     floors/ceilings.
+    #     """
+    #     if space_below_floor != "Ground":
+    #         floor_use_index = "_".join(space_below_floor.split("_")[1:]) + "_use"
+    #         try:
+    #             use_below = row[floor_use_index]
+    #         except KeyError:
+    #             use_below = ""
+    #         if isinstance(use_below, str) and use_below.lower() == "shading":
+    #             space_below_floor = "shading"
+
+    #     if space_above_floor != "Outdoors":
+    #         floor_use_index = "_".join(space_above_floor.split("_")[1:]) + "_use"
+    #         try:
+    #             use_above = row[floor_use_index]
+    #         except KeyError:
+    #             use_above = ""
+    #         if isinstance(use_above, str) and use_above.lower() == "shading":
+    #             space_above_floor = "shading"
+
+    #     return space_below_floor, space_above_floor
 
     ########### Added features for Simstock QGIS plugin ########################
     overhang_depth = row.overhang_depth
@@ -1456,7 +1513,7 @@ def external_walls(idf, zone_name, floor_number,
 
 
 def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
-                    ceiling_height, floor_height, partition_const):
+                    ceiling_height, floor_height, partition_const, adiabatic=True):
     '''
     Function which creates partition walls
     '''
@@ -1465,8 +1522,15 @@ def partition_walls(idf, zone_name, adj_osgb, vertical_surface_coordinates,
     sun_exposure = 'NoSun'
     wind_exposure = 'NoWind'
     opposite_zone = adj_osgb
-    outside_boundary_condition = 'Adiabatic'
-    obco = ''
+    if adiabatic:
+        outside_boundary_condition = 'Adiabatic'
+        obco = ''
+        
+    # TODO: does this work for attached shading?
+    elif not adiabatic:
+        outside_boundary_condition = 'Surface'
+        obco = opposite_zone + '_Part_' + zone_name + '_' + wcc
+
     # Append the vertical surface coordinates with the ceiling and floor height
     ceiling_coordinates = coordinates_add_height(ceiling_height,
                                                  vertical_surface_coordinates)

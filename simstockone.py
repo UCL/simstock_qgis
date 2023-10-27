@@ -785,7 +785,7 @@ def collinear_exterior(df):
     def update_exposed(exposed_ring, points_to_remove):
         if exposed_ring.geom_type == 'MultiLineString':
             new_ms = list()
-            for item in exposed_ring:
+            for item in exposed_ring.geoms:
                 new_item = remove_items_from_list(list(item.coords),
                                                   points_to_remove)
                 if len(new_item) > 1:
@@ -813,7 +813,7 @@ def collinear_exterior(df):
         i_r = MultiLineString(polygon.interiors)
         t_t = unary_union((o_r, i_r))
         if t_t.geom_type == 'MultiLineString':
-            for item in t_t:
+            for item in t_t.geoms:
                 coords = list(item.coords)
                 coords.append(coords[1])
                 coll_points = coollinear_points(coords)
