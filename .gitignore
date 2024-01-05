@@ -5,3 +5,4 @@ EnergyPlus/*/
 eppy-scripts/psutil*/
 shoebox-output/
 .vscode/
+log.log*
