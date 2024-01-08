@@ -989,14 +989,6 @@ class SimstockQGIS:
         This is also now called by the "Add Fields" button with results_mode=False
         TODO: move result fetching fns elsewhere.
         """
-        # Set up Eppy
-        from eppy.modeleditor import IDF, IDDAlreadySetError
-        if self.system in ['windows', 'linux', 'darwin']:
-            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
-        try:
-            IDF.setiddname(iddfile)
-        except IDDAlreadySetError:
-            pass
 
         def getzones(idf):
             """Finds thermal zones in idf and outputs numpy array."""
@@ -1056,7 +1048,7 @@ class SimstockQGIS:
 
             # Loop over each zone's results df
             for zone, df in all_results.items():
-                # Output definition
+                # Output results definition
                 # Get operative temperature and use thresholds to get hours above/below
                 operative_series = get_result_val("Zone Operative Temperature", df)
                 below = operative_series[operative_series < self.low_temp_threshold].count()
@@ -1140,7 +1132,7 @@ class SimstockQGIS:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
                     print(f"Retrieving results for '{osgb}'...")
-                    logging.info(f"Retrieving results for '{osgb}'...")
+                    #logging.info(f"Retrieving results for '{osgb}'...")
 
                     # Find the BI ref
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
@@ -1200,6 +1192,15 @@ class SimstockQGIS:
                 self.features[i].setAttributes(feature_attrs)
 
 
+        # Set up Eppy
+        from eppy.modeleditor import IDF, IDDAlreadySetError
+        if self.system in ['windows', 'linux', 'darwin']:
+            iddfile = os.path.join(self.EP_DIR, 'ep8.9_{}/Energy+.idd'.format(self.system))
+        try:
+            IDF.setiddname(iddfile)
+        except IDDAlreadySetError:
+            pass
+
         # Change some of the existing attributes if necessary (probably not)
         #self.features[0].setAttribute(1, "text")
 
@@ -1235,7 +1236,7 @@ class SimstockQGIS:
             #currency = self.config["Currency"]
             extracted_results = extract_results(all_results)
 
-            # Output definition
+            # Output results definition
             # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = [f"Hours/yr below {self.low_temp_threshold}C operative temperature",
                           f"Hours/yr above {self.high_temp_threshold}C operative temperature",
@@ -1378,14 +1379,13 @@ class SimstockQGIS:
                           "The selected cwd does not exist - please create the directory if necessary.",
                           duration=10)
             return
-        
+        print("Loading database...")
+
         # Set abspath after checks
         self.user_cwd = os.path.abspath(self.user_cwd)
 
         # Set idf path
         self.idf_dir = os.path.join(self.user_cwd, "idf_files")
-        
-        print("Loading database...")
 
         # First check for existing database layers and remove them
         layers = QgsProject.instance().mapLayers()
