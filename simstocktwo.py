@@ -156,6 +156,7 @@ def main(idf_dir):
             zone_ventilation_dict["Zone_or_ZoneList_Name"] = zone
             zone_ventilation_dict["Air_Changes_per_Hour"] = ventilation_rate
             zone_ventilation_dict["Schedule_Name"] = zone_use_dict[zone] + "_Occ"
+            zone_ventilation_dict["Minimum_Indoor_Temperature"] = float(config["Ventilation minimum temperature"])
 
             # Same for infiltration
             zone_infiltration_dict["Name"] = zone + "_infiltration"

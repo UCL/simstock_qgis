@@ -2,6 +2,8 @@
     "Shading buffer radius - m": "50",
     "epw": "testing.epw",
 
+    "Ventilation minimum temperature": "26.0",
+
     "Low temperature threshold": "18.0",
     "High temperature threshold": "28.0"
 }
