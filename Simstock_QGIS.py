@@ -1053,6 +1053,20 @@ class SimstockQGIS:
                 operative_series = get_result_val("Zone Operative Temperature", df)
                 below = operative_series[operative_series < self.low_temp_threshold].count()
                 above = operative_series[operative_series > self.high_temp_threshold].count()
+
+                # below_1 = operative_series[operative_series < self.low_temp_threshold_1].count()
+                # below_2 = operative_series[operative_series < self.low_temp_threshold_2].count()
+                # below_3 = operative_series[operative_series < self.low_temp_threshold_3].count()
+                # below_4 = operative_series[operative_series < self.low_temp_threshold_4].count()
+
+                # above_1 = operative_series[operative_series > self.high_temp_threshold_1].count()
+                # above_2 = operative_series[operative_series > self.high_temp_threshold_2].count()
+                # above_3 = operative_series[operative_series > self.high_temp_threshold_3].count()
+                # above_4 = operative_series[operative_series > self.high_temp_threshold_4].count()
+
+                # Get minimum and maximum temperatures
+                min_temp = round(min(operative_series), 2)
+                max_temp = round(max(operative_series), 2)
                 
                 # Get electricity consumption
                 elec = get_result_val("Electricity", df).sum()
@@ -1078,7 +1092,13 @@ class SimstockQGIS:
                 # total_cost = round(energy * elec_cost, 2)
 
                 # Combine extracted results into list
-                lst = [below, above, elec, heating_load, cooling_load] #TODO: this needs to be same order as attr_types, change to dict?
+                lst = [below,
+                       above,
+                       min_temp,
+                       max_temp,
+                       elec,
+                       heating_load,
+                       cooling_load] #TODO: this needs to be same order as attr_types, change to dict?
                 lst = list(map(float, lst)) #change type from np float to float
                 extracted_results[zone] = lst
 
@@ -1233,6 +1253,17 @@ class SimstockQGIS:
             all_results = make_allresults_dict()
             self.low_temp_threshold = float(self.config["Low temperature threshold"])
             self.high_temp_threshold = float(self.config["High temperature threshold"])
+
+            # self.low_temp_threshold_1 = float(self.config["Low temperature threshold 1"])
+            # self.low_temp_threshold_2 = float(self.config["Low temperature threshold 2"])
+            # self.low_temp_threshold_3 = float(self.config["Low temperature threshold 3"])
+            # self.low_temp_threshold_4 = float(self.config["Low temperature threshold 4"])
+
+            # self.high_temp_threshold_1 = float(self.config["High temperature threshold 1"])
+            # self.high_temp_threshold_2 = float(self.config["High temperature threshold 2"])
+            # self.high_temp_threshold_3 = float(self.config["High temperature threshold 3"])
+            # self.high_temp_threshold_4 = float(self.config["High temperature threshold 4"])
+
             #currency = self.config["Currency"]
             extracted_results = extract_results(all_results)
 
@@ -1240,6 +1271,8 @@ class SimstockQGIS:
             # The base names of the results fields to be added (floor number will be appended to these)
             attr_types = [f"Hours/yr below {self.low_temp_threshold}C operative temperature",
                           f"Hours/yr above {self.high_temp_threshold}C operative temperature",
+                           "Min temperature (degC)",
+                           "Max temperature (degC)",
                            "Electricity consumption (kWh/yr)",
                            "Heating load (kWh/yr)",
                            "Cooling load (kWh/yr)"]
