@@ -882,39 +882,75 @@ class SimstockQGIS:
               be made - this can be pushed to the user.
         """
 
+        # Checks to do for all attrs:
+        #   - Missing values
+        #       - For String it is ""
+        #       - For Int, Double it is type QVariant - TODO: can the check be more specific?
+        #   - Invalid values
+
         # Check values which are required for all polygons
         for y, value in enumerate(dfdict["shading"]):
+
+            # TODO: Change shading field type to bool?
+            # Shading invalid
             if isinstance(value, str) and value.lower() not in ["false", "true"]:
                 return (f"Values in the 'shading' field should be 'true' or 'false'.\nReceived: '{value}' for {dfdict['UID'][y]}.")
+            
+            # Shading missing
             if isinstance(value, QVariant):
                 return (f"Values in the 'shading' field should be 'true' or 'false'.\nCheck value for {dfdict['UID'][y]}.")
+            
+            # Height missing
             if isinstance(dfdict["height"][y], QVariant):
                 return (f"Check 'height' value for {dfdict['UID'][y]}.")
+            
+            # Height invalid
             if dfdict["height"][y] == 0:
                 return (f"Height value for {dfdict['UID'][y]} is zero.")
+            
+            # UID missing
             if dfdict["UID"][y] == "":
                 return ("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
-        
-        # TODO: change shading field type to bool?
-        if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0] == "true":
+            
+            # TODO: add check for duplicate UIDs
+            
+        # Check if all polygons are shading
+        if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0].lower() == "true":
             return ("Polygons cannot all be shading! Ensure that some are set to 'false'.")
 
         # Check values which are required for only non-shading polygons
         for y, value in enumerate(dfdict["shading"]):
             if str(value).lower() == "false":
+
+                # WWR missing
                 if isinstance(dfdict["wwr"][y], QVariant):
                     return (f"Check 'wwr' value for {dfdict['UID'][y]}")
+                
+                # Construction missing
                 if dfdict["construction"][y] == "":
                     return (f"Check 'construction' value for {dfdict['UID'][y]}")
+                
+                # Glazing_const missing
+                if dfdict["glazing_const"][y] == "":
+                    return (f"Check 'glazing_const' value for {dfdict['UID'][y]}")
+                
+                # Ventilation_rate missing
                 if isinstance(dfdict["ventilation_rate"][y], QVariant):
                     return (f"Check 'ventilation_rate' value for {dfdict['UID'][y]}")
+                
+                # Infiltration_rate missing
                 if isinstance(dfdict["infiltration_rate"][y], QVariant):
                     return (f"Check 'infiltration_rate' value for {dfdict['UID'][y]}")
+                
+                # Nofloors missing
                 if isinstance(dfdict["nofloors"][y], QVariant):
                     return (f"Check 'nofloors' value for {dfdict['UID'][y]}")
+                
+                # Nofloors invalid (zero) value
                 if dfdict["nofloors"][y] == 0:
                     return (f"Polygon {dfdict['UID'][y]} has zero value for 'nofloors'.")
-                
+        
+        # Return None if all checks passed
         return
 
 
