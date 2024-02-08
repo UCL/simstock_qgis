@@ -12,6 +12,7 @@ EnergyPlus/Backups/
 Database/old/
 README.md
 prep.txt
+log.log
 update metadata.txt
 
 glob.glob("Simstock QGIS Plugin docs/", root_dir=cwd, recursive=True)
