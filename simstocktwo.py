@@ -912,7 +912,7 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     # Select constructions
     #glazing_const = "glazing"
     def set_construction(construction, element):
-        # TODO: generalise this
+        # TODO: this is not really needed
         """
         Returns the relevant name of the building surface depending on the 
         construction name.
