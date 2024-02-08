@@ -1,0 +1,22 @@
+basic_settings.idf
+sa_data.csv
+sa_preprocessed.csv
+.gitignore
+.vscode/
+Simstock QGIS Plugin docs/
+*.pyc*
+*__pycache__*
+eppy-scripts/psutil*
+EnergyPlus/ep*
+EnergyPlus/Backups/
+Database/old/
+README.md
+prep.txt
+update metadata.txt
+
+glob.glob("Simstock QGIS Plugin docs/", root_dir=cwd, recursive=True)
+glob.glob(".vscode/", root_dir=cwd, recursive=True)
+glob.glob("**/*.pyc", root_dir=cwd, recursive=True)
+glob.glob("**/__pycache__", root_dir=cwd, recursive=True)
+
+An executable file should be written to automatically delete the unnecessary files before updating the plugin.
