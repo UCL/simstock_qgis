@@ -1046,24 +1046,39 @@ class SimstockQGIS:
             all_zones = np.array([zone.Name for zone in idf.idfobjects["ZONE"]])
             return all_zones
 
+
         def make_allresults_dict():
-            """Returns a dict where the key is the name of the thermal
-            zone and the value is a df containing all results."""
+            """
+            Returns a dict where the key is the name of the thermal zone and the value is a df
+            containing all results for that zone.
+            """
             all_results = {}
-            for dir in self.idf_result_dirs:
+
+            # Loop through result directories
+            for dirpath in self.idf_result_dirs:
+
+                # Get results csv if exists
                 try:
-                    df = pd.read_csv(os.path.join(dir, "eplusout.csv"))
+                    df = pd.read_csv(os.path.join(dirpath, "eplusout.csv"))
                 except pd.errors.EmptyDataError:
-                    raise RuntimeError("Results for '%s' not found. Check EnergyPlus .err file" % os.path.basename(dir))
-                idf = IDF(dir + ".idf")
+                    raise RuntimeError(f"Results for '{os.path.basename(dirpath)}' not found. Check EnergyPlus .err file")
+                
+                # Load corresponding idf file with same name
+                idf = IDF(dirpath + ".idf")
+
+                # Get zone names from within the idf
                 zonelist = getzones(idf)
 
+                # Loop through the idf zones and look for the corresponding result columns
                 for zone in zonelist:
                     zonename = zone.upper() #E+ outputs zone names in caps in results
                     zonecols = [col for col in df.columns if zonename in col]
-                    all_results[zone] = df[zonecols]
+                    zone_df = df[zonecols]
+                    #zone_df["results_path"] = dirpath #add path to results #inprogress
+                    all_results[zone] = zone_df
 
             return all_results
+
 
         def extract_results(all_results):
             """
@@ -1150,10 +1165,11 @@ class SimstockQGIS:
                        elec,
                        heating_load,
                        cooling_load] #TODO: this needs to be same order as attr_types, change to dict?
-                lst = list(map(float, lst)) #change type from np float to float
+                lst = [float(x) for x in lst] #change type from np float to float
                 extracted_results[zone] = lst
 
             return extracted_results
+
 
         def new_attrs_all_floors(max_floors, attr_types, results_mode):
             """
@@ -1175,7 +1191,7 @@ class SimstockQGIS:
                     for attr_type in attr_types:
 
                         # Prepend floor number to result base name
-                        attr_name_floor = "FLOOR_" + str(i+1) + ": " + attr_type
+                        attr_name_floor = f"FLOOR_{i+1}: {attr_type}"
 
                         if results_mode:
                             # Using "Double" type (float) for all results fields
