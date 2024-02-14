@@ -765,6 +765,10 @@ class SimstockQGIS:
             self.push_msg("Input data problem", dc_message)
             logging.critical(f"Input data problem: {dc_message}")
             return
+        
+        # Check that epw file exists
+        if not self.check_epw():
+            return
 
         # Extract floor-specific attribute table input data (use columns) if they exist
         dfdict = self.extract_floor_data(dfdict)
@@ -952,6 +956,30 @@ class SimstockQGIS:
         
         # Return None if all checks passed
         return
+    
+
+
+    def check_epw(self):
+        """
+        Checks if the epw weather file exists in the user's cwd.
+
+        Returns True if so, or False if the file is not found.
+        """
+        # Set epw path from user cwd and specified filename in config file
+        self.epw_file = os.path.join(self.user_cwd, self.config["epw"])
+
+        # Check if the file exists
+        if not os.path.exists(self.epw_file):
+            self.push_msg("Weather epw file not found",
+                          "Check that it exists in the cwd and that is spelled correctly in "
+                          "the 'config.json' file.",
+                          qgislevel=Qgis.Critical,
+                          duration=10)
+            return False
+
+        # If the file exists
+        else:
+            return True
 
 
 
@@ -961,19 +989,6 @@ class SimstockQGIS:
         Outputs: a list of directories containing the results for each idf.
         """
         #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
-
-        # Weather file
-        self.epw_file = os.path.join(self.user_cwd, self.config["epw"])
-        if not os.path.exists(self.epw_file):
-            print(f"Weather epw_file '{self.epw_file}' not found! "
-                    "Check that it exists in the cwd and that is spelled correctly in "
-                    "the 'config.json' file.")
-            self.iface.messageBar().pushMessage("Weather epw file not found",
-                            "Check that it exists in the cwd and that is spelled correctly in "
-                            "the 'config.json' file.",
-                            level=Qgis.Critical,
-                            duration=10)
-            return
 
         # List of output directory names
         idf_result_dirs = []
