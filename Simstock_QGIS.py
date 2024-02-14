@@ -285,19 +285,19 @@ class SimstockQGIS:
         # The prepended tag on database files used to identify them
         self.database_tag = "DB-"
 
-        # The headings that Simstock expects and the QVariant type of each
-        # Format is: "heading-QVariantType"
-        self.headings = ["polygon-None",
-                         "UID-String",
-                         "shading-String",
-                         "height-Double",
-                         "wwr-Double",
-                         "nofloors-Int",
-                         "construction-String",
-                         "glazing_const-String",
-                         "infiltration_rate-Double",
-                         "ventilation_rate-Double",
-                         "overhang_depth-Double"]
+        # The headings that Simstock expects and the QVariant type of each, and dummy values
+        # Format is: "heading-QVariantType-dummyvalue"
+        self.headings = ["polygon-None-None",
+                         "UID-String-None",
+                         "shading-String-false",
+                         "height-Double-3.0",
+                         "wwr-Double-12",
+                         "nofloors-Int-1",
+                         "construction-String-uninsulated",
+                         "glazing_const-String-uninsulated_glazing",
+                         "infiltration_rate-Double-0.7",
+                         "ventilation_rate-Double-2.0",
+                         "overhang_depth-Double-None"]
 
         # Load config file
         with open(os.path.join(self.plugin_dir, "config.json"), "r") as read_file:
@@ -1184,6 +1184,7 @@ class SimstockQGIS:
                 # Grab the attributes from this feature
                 feature_attrs = self.features[i].attributes()
                 
+
                 if results_mode:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
@@ -1231,18 +1232,31 @@ class SimstockQGIS:
                         #       [f.name() for f in self.features[i].fields()] to get fields in order.
                         feature_attrs.append(self.unique_ids[i])
 
-                    # Debugging feature to add default values to a newly created layer
+                    # Debugging feature to add dummy values to a newly created layer
                     # Note: this fails if some of the columns already exist, but is only for testing
-                    debugging = False #TODO: add these default vals to a list to make it easier
+                    debugging = False
                     if debugging:
-                        feature_attrs.append("false")
-                        feature_attrs.append(3.0)
-                        feature_attrs.append(12.0)
-                        feature_attrs.append(int(1))
-                        feature_attrs.append("uninsulated")
-                        feature_attrs.append("uninsulated_glazing")
-                        feature_attrs.append(0.7)
-                        feature_attrs.append(2.0)
+                        self.push_msg("Debugging mode activated",
+                                      "Filling dummy values for each attribute",
+                                      qgislevel=Qgis.Info,
+                                      printout=False,
+                                      duration=10)
+
+                        # Loop over headings, types, dummy vals
+                        for headingtypeval in self.headings:
+                            htype, val = headingtypeval.split("-")[1:3]
+
+                            # Excludes polygon, UID as it is pre-generated, and overhang depth as it is not necessary
+                            if val != "None":
+
+                                # Ensure correct types
+                                if htype == "Double":
+                                    val = float(val)
+                                if htype == "Int":
+                                    val = int(val)
+
+                                # Add dummy values
+                                feature_attrs.append(val)
 
                 # Set the feature's attributes
                 self.features[i].setAttributes(feature_attrs)
@@ -1268,6 +1282,7 @@ class SimstockQGIS:
             elif self.HeatCool.lower() == "true":
                 new_layer_name = self.selectedLayer.name() + "_Simstock-results_HC-On"
         else:
+            # Grab selected layer (in results mode this would have already been done)
             self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
             new_layer_name = self.selectedLayer.name() + "_1"
         
@@ -1283,10 +1298,13 @@ class SimstockQGIS:
         layer_fields = self.selectedLayer.fields() # QgsFields type
         new_attrs = []
 
+
         if results_mode:
             # Needs generalising
-            # Extract the results from the csvs by thermal zone
+            # Extract all results from the csvs by thermal zone
             all_results = make_allresults_dict()
+
+            # Load config stuff and constants required for post-processing
             self.low_temp_threshold = float(self.config["Low temperature threshold"])
             self.high_temp_threshold = float(self.config["High temperature threshold"])
 
@@ -1301,6 +1319,8 @@ class SimstockQGIS:
             # self.high_temp_threshold_4 = float(self.config["High temperature threshold 4"])
 
             #currency = self.config["Currency"]
+
+            # Extract only the results of interest from the dfs
             extracted_results = extract_results(all_results)
 
             # Output results definition
@@ -1314,6 +1334,7 @@ class SimstockQGIS:
                            "Cooling load (kWh/yr)"]
             max_floors = int(self.preprocessed_df['nofloors'].max())
 
+
         else:
             attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
@@ -1324,7 +1345,7 @@ class SimstockQGIS:
             
             # Add fields which are not floor-specific
             for field in self.headings:
-                heading, QVtype = field.split("-")
+                heading, QVtype = field.split("-")[:2]
                 if heading != "polygon":
                     exec(f"new_attrs.append(QgsField('{heading}', QVariant.{QVtype}))", globals(), locals())
 
@@ -1344,6 +1365,7 @@ class SimstockQGIS:
                 # So ignore the floor-specific fields for now
                 max_floors = None
         
+
         # Add new attribute types for the results for all floors
         new_attrs.extend(new_attrs_all_floors(max_floors, attr_types, results_mode))
 
@@ -1509,6 +1531,8 @@ class SimstockQGIS:
                     label = row.index[i]
 
                     # Only add the field if it has content and is not notes
+                    # TODO: If a required field has been left blank, this will exclude it
+                    #       Either errors will occur later, or Eppy will fill a default value which is unseen by the user
                     if not content == qgis_null and not content == "" and not label == 'Notes': #using qgis nulltype instead of pd here
 
                         # Next check avoids QGIS bug where it appends "_1" to numbered fields
