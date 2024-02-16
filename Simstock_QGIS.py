@@ -203,6 +203,14 @@ class SimstockQGIS:
             callback=self.run,
             parent=self.iface.mainWindow())
         # Run "pyrcc5 -o resources.py resources.qrc" to update icon
+
+        # Side action
+        #self.add_action(
+        #    icon_path,
+        #    text=self.tr(u'Side action'),
+        #    callback=self.side_action,
+        #    parent=self.iface.mainWindow(),
+        #    add_to_toolbar=False)
         
         # Help action
         self.help_action = QAction(QgsApplication.getThemeIcon("/mActionContextHelp.png"),
@@ -214,6 +222,10 @@ class SimstockQGIS:
 
         # will be set False in run()
         self.first_start = True
+
+    
+    #def side_action(self):
+    #    print("side action")
     
 
     def show_help(self):
