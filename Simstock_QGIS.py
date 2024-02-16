@@ -914,6 +914,10 @@ class SimstockQGIS:
         #       - For Int, Double it is type QVariant - TODO: can the check be more specific?
         #   - Invalid values
 
+        # Check for duplicate UIDs
+        if len(dfdict["UID"]) != len(set(dfdict["UID"])):
+            return f"Duplicate UIDs detected! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again."
+
         # Check values which are required for all polygons
         for y, value in enumerate(dfdict["shading"]):
 
@@ -937,12 +941,12 @@ class SimstockQGIS:
             # UID missing
             if dfdict["UID"][y] == "":
                 return ("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
-            
-            # TODO: add check for duplicate UIDs
-            
+        
+
         # Check if all polygons are shading
         if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0].lower() == "true":
             return ("Polygons cannot all be shading! Ensure that some are set to 'false'.")
+
 
         # Check values which are required for only non-shading polygons
         for y, value in enumerate(dfdict["shading"]):
