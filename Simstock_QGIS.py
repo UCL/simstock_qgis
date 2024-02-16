@@ -709,7 +709,17 @@ class SimstockQGIS:
 
 
     def push_msg(self, title, text, qgislevel=Qgis.Critical, printout=True, duration=None):
-        """Pushes a message to both QGIS and the Python console."""
+        """
+        Pushes a message to QGIS (and the Python console if printout is True).
+
+        qgislevel options:
+            - Qgis.Info
+            - Qgis.Warning
+            - Qgis.Critical (default)
+            - Qgis.Success
+
+        If no duration is specified, message will persist indefinitely.
+        """
 
         if printout:
             print(title + ": " + text)
@@ -1101,23 +1111,27 @@ class SimstockQGIS:
             """
 
             def get_result_val(output_name, df):
-                """Looks into zone result df for a given output. Returns 
-                the whole series of values."""
+                """
+                Looks into zone result df for a given output. Returns the whole series of values.
+                """
                 # Find column(s) containing the specified output name
                 value_col = [col for col in df.columns if output_name in col]
 
                 # Raise error if no column is found
                 if len(value_col) == 0:
-                    raise RuntimeError("Cannot find %s value for zone '%s' in results." % (output_name, zone))
-                
+                    logging.critical(f"Cannot find {output_name} value for zone '{zone}' in results.")
+                    raise RuntimeError(f"Cannot find {output_name} value for zone '{zone}' in results.")
+
                 # If more than one column is found
                 if len(value_col) > 1:
-                    print("Found two values for %s for zone '%s' in results." % (output_name, zone))
-                
+                    print(f"Found two values for {output_name} for zone '{zone}' in results.")
+                    logging.warning(f"Found two values for {output_name} for zone '{zone}' in results.")
+
                 # Return the column of interest
                 series = df[value_col[0]] #should only be one col
                 return series
-            
+
+
             # Set up empty dict and get post-processing values
             extracted_results = {}
             #cooling_COP = float(self.config["Cooling COP"])
@@ -1187,7 +1201,8 @@ class SimstockQGIS:
             """
             Creates a result field for each result type up to the max number of floors.
             
-            Needs generalising - specifically using float for all result fields
+            Needs generalising - specifically using float for all result fields. Can do a similar
+            thing as with self.headings.
             """
             new_attrs = []
 
