@@ -1235,6 +1235,7 @@ class SimstockQGIS:
             #attr_names = [attr.name() for attr in new_attrs]
             return new_attrs#, attr_names
 
+
         def add_results_to_features(fields, results_mode, extracted_results=None):
             """Adds the new attributes to the features and populates their values."""
             # Loop through each feature (polygon)
@@ -1267,7 +1268,7 @@ class SimstockQGIS:
 
                             # Check the order is correct
                             print(f"    Found results for floor {j+1}: '{zone}'")
-                            if zone[-1] != str(j+1):
+                            if zone[-1] != str(j+1):    #TODO: this only works for single digit floors
                                 logging.warning(f"Floor results are in the wrong order for zone '{zone}'.")
 
                             # Collect the results for the thermal zone
@@ -1276,6 +1277,7 @@ class SimstockQGIS:
                     # Put the results with the rest of the attributes ready for adding
                     feature_attrs.extend(result_vals)
                 
+
                 elif not results_mode:
                     # Check if UID values already exist
                     done = False
