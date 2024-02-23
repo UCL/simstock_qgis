@@ -205,11 +205,22 @@ ZoneControl:Thermostat,
 ! - Dual SP control object type
 ! - Dual SP control object name
 ZoneControl:Thermostat,
-    Commercial Thermostat,        !- Name
-    Commercial,                   !- Zone or ZoneList Name
+    Office Thermostat,        !- Name
+    Office,                   !- Zone or ZoneList Name
     Always 4,                !- Control Type Schedule Name
     ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
-    Commercial Dual SP;           !- Control 1 Name
+    Office Dual SP;           !- Control 1 Name
+
+! - Zone name
+! - Control type schedule name
+! - Dual SP control object type
+! - Dual SP control object name
+ZoneControl:Thermostat,
+    Shop Thermostat,        !- Name
+    Shop,                   !- Zone or ZoneList Name
+    Always 4,                !- Control Type Schedule Name
+    ThermostatSetpoint:DualSetpoint,  !- Control 1 Object Type
+    Shop Dual SP;           !- Control 1 Name
 
 ! - Zone name
 ! - Control type schedule name
@@ -246,9 +257,16 @@ ThermostatSetpoint:DualSetpoint,
 ! - Name
 ! - Heating setpoint temperature schedule name
 ThermostatSetpoint:DualSetpoint,
-    Commercial Dual SP,           !- Name
-    Commercial_Heat,              !- Heating Setpoint Temperature Schedule Name
-    Commercial_Cool;              !- Cooling Setpoint Temperature Schedule Name
+    Office Dual SP,           !- Name
+    Office_Heat,              !- Heating Setpoint Temperature Schedule Name
+    Office_Cool;              !- Cooling Setpoint Temperature Schedule Name
+	
+! - Name
+! - Heating setpoint temperature schedule name
+ThermostatSetpoint:DualSetpoint,
+    Shop Dual SP,           !- Name
+    Shop_Heat,              !- Heating Setpoint Temperature Schedule Name
+    Shop_Cool;              !- Cooling Setpoint Temperature Schedule Name
 
 ! - Name
 ! - Heating setpoint temperature schedule name
