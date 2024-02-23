@@ -305,8 +305,10 @@ class SimstockQGIS:
                          "height-Double-3.0",
                          "wwr-Double-12",
                          "nofloors-Int-1",
-                         "construction-String-uninsulated",
-                         "glazing_const-String-uninsulated_glazing",
+                         "wall_const-String-wall_cavity_uninsulated",
+                         "roof_const-String-roof_flat_uninsulated",
+                         "floor_const-String-ground_floor_solid_uninsulated",
+                         "glazing_const-String-glazing_uninsulated",
                          "infiltration_rate-Double-0.7",
                          "ventilation_rate-Double-2.0",
                          "overhang_depth-Double-None"]
@@ -908,6 +910,9 @@ class SimstockQGIS:
               be made - this can be pushed to the user.
         """
 
+        # TODO: This can probably be streamlined and written to auto-update by utilising the self.headings
+        #       Maybe change the self.headings into a nested dictionary
+
         # Checks to do for all attrs:
         #   - Missing values
         #       - For String it is ""
@@ -956,13 +961,22 @@ class SimstockQGIS:
                 if isinstance(dfdict["wwr"][y], QVariant):
                     return (f"Check 'wwr' value for {dfdict['UID'][y]}")
                 
-                # Construction missing
-                if dfdict["construction"][y] == "":
-                    return (f"Check 'construction' value for {dfdict['UID'][y]}")
-                
-                # Glazing_const missing
+                # wall_const missing
+                if dfdict["wall_const"][y] == "":
+                    return (f"Check 'wall_const' value for {dfdict['UID'][y]}. "
+                            "Each construction element must now be specified separately.")
+                # roof_const missing
+                if dfdict["roof_const"][y] == "":
+                    return (f"Check 'roof_const' value for {dfdict['UID'][y]}. "
+                            "Each construction element must now be specified separately.")
+                # floor_const missing
+                if dfdict["floor_const"][y] == "":
+                    return (f"Check 'floor_const' value for {dfdict['UID'][y]}. "
+                            "Each construction element must now be specified separately.")
+                # glazing_const missing
                 if dfdict["glazing_const"][y] == "":
-                    return (f"Check 'glazing_const' value for {dfdict['UID'][y]}")
+                    return (f"Check 'glazing_const' value for {dfdict['UID'][y]}. "
+                            "Each construction element must now be specified separately.")
                 
                 # Ventilation_rate missing
                 if isinstance(dfdict["ventilation_rate"][y], QVariant):
@@ -1187,6 +1201,9 @@ class SimstockQGIS:
                 # # Apply cost of electricity to get total cost
                 # total_cost = round(energy * elec_cost, 2)
 
+                # Path to results #inprogress
+                #r_path = df["results_path"][0]
+
                 # Combine extracted results into list
                 lst = [below,
                        above,
@@ -1231,6 +1248,9 @@ class SimstockQGIS:
                             # Using "String" type for all fields (should only be 'use')
                             new_attrs.append(QgsField(attr_name_floor, QVariant.String))
 
+            #if results_mode:
+            #    new_attrs.append(QgsField('Results directory', QVariant.String)) #inprogress
+
             # Get the names of each newly created attribute
             #attr_names = [attr.name() for attr in new_attrs]
             return new_attrs#, attr_names
@@ -1273,6 +1293,8 @@ class SimstockQGIS:
 
                             # Collect the results for the thermal zone
                             result_vals.extend(extracted_results[zone])
+
+                        #result_vals.append("r_path_here") #inprogress
                     
                     # Put the results with the rest of the attributes ready for adding
                     feature_attrs.extend(result_vals)

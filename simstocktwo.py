@@ -852,11 +852,16 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
     # List of adjacent polygons
     adj_osgb_list = literal_eval(row.sa_collinear_touching)
 
+
+    # Retrieve required attributes from table
     height = row.height
     glazing_ratio = row.wwr
     floors = range(int(row.nofloors))
 
-    construction = row.construction
+    #construction = row.construction
+    wall_const = row.wall_const
+    flat_roof_const = row.roof_const
+    ground_floor_const = row.floor_const
     glazing_const = row.glazing_const
 
     # def zone_use(row, zone_name, zone_use_dict, floor_no):
@@ -947,16 +952,15 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
         idf.newidfobject('ZONE', Name=zone_name)
 
-        floor_const = set_construction(construction, "ground_floor")
+        floor_const = ground_floor_const
         floor(idf, zone_name, space_below_floor, horiz_surf_coord,
               zone_floor_h, floor_const)
 
-        roof_const = set_construction(construction, "roof")
+        roof_const = flat_roof_const
         roof_ceiling(idf, zone_name, space_above_floor,
                      horiz_surf_coord, zone_ceiling_h, roof_const)
 
         zone_height = zone_ceiling_h - zone_floor_h
-        wall_const = set_construction(construction, "wall")
         external_walls(idf, zone_name, floor_no, ext_surf_coord,
                        zone_ceiling_h, zone_floor_h, zone_height,
                        min_avail_height, min_avail_width_for_window,
@@ -1025,15 +1029,14 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = set_construction(construction, "ground_floor")
+                floor_const = ground_floor_const
                 floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = set_construction(construction, "ceiling")
+                roof_const = "ceiling"
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h, roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = set_construction(construction, "wall")
                 external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
@@ -1099,15 +1102,14 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = set_construction(construction, "ceiling_inverse")
+                floor_const = "ceiling_inverse"
                 floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = set_construction(construction, "roof")
+                roof_const = flat_roof_const
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h, roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = set_construction(construction, "wall")
                 external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
@@ -1174,16 +1176,15 @@ def thermal_zones(row, df, idf, origin, zone_use_dict):
 
                 idf.newidfobject('ZONE', Name=zone_name)
 
-                floor_const = set_construction(construction, "ceiling_inverse")
+                floor_const = "ceiling_inverse"
                 floor(idf, zone_name, space_below_floor,
                       horiz_surf_coord, zone_floor_h, floor_const)
-                roof_const = set_construction(construction, "ceiling")
+                roof_const = "ceiling"
                 roof_ceiling(idf, zone_name, space_above_floor,
                              horiz_surf_coord, zone_ceiling_h,
                              roof_const)
 
                 zone_height = zone_ceiling_h - zone_floor_h
-                wall_const = set_construction(construction, "wall")
                 external_walls(
                     idf, zone_name, floor_no, ext_surf_coord, zone_ceiling_h,
                     zone_floor_h, zone_height, min_avail_height,
