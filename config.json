@@ -1,5 +1,5 @@
 {
-    "Shading buffer radius - m": "50",
+    "Shading buffer radius - m": "20",
     "epw": "testing.epw",
 
     "Ventilation minimum temperature": "26.0",
