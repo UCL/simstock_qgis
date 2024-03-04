@@ -1227,9 +1227,16 @@ class SimstockQGIS:
             """
             new_attrs = []
 
+            # Add attributes before floor-specific ones     #TODO: move this out
             if results_mode:
+
                 # Add the built island ref as a result
                 new_attrs.append(QgsField('bi_ref', QVariant.String))
+
+                # Add total fields
+                new_attrs.append(QgsField('Total electricity consumption (kWh/yr)', QVariant.Double))
+                new_attrs.append(QgsField('Total heating load (kWh/yr)', QVariant.Double))
+                new_attrs.append(QgsField('Total cooling load (kWh/yr)', QVariant.Double))
 
             if max_floors is not None:
                 # Must add the same number of fields to each feature
@@ -1248,8 +1255,12 @@ class SimstockQGIS:
                             # Using "String" type for all fields (should only be 'use')
                             new_attrs.append(QgsField(attr_name_floor, QVariant.String))
 
+            # Add attributes after floor-specific ones
+            # NOTE: that if not all the floor-specific fields are filled out (e.g. if the polygon
+            #       has fewer floors) then anything added here will unintentionally end up in the
+            #       floor fields. To avoid this, could add manual NULL values.
             #if results_mode:
-            #    new_attrs.append(QgsField('Results directory', QVariant.String)) #inprogress
+                #new_attrs.append(QgsField('Results directory', QVariant.String)) #inprogress
 
             # Get the names of each newly created attribute
             #attr_names = [attr.name() for attr in new_attrs]
@@ -1257,7 +1268,11 @@ class SimstockQGIS:
 
 
         def add_results_to_features(fields, results_mode, extracted_results=None):
-            """Adds the new attributes to the features and populates their values."""
+            """
+            Adds the new attributes to the features and populates their values.
+            Needs generalising
+            """
+
             # Loop through each feature (polygon)
             for i in range(len(self.features)):
 
@@ -1271,6 +1286,8 @@ class SimstockQGIS:
                 if results_mode:
                     # Get the unique id for this feature
                     osgb = self.features[i].attribute("UID")
+
+                    # Log progress
                     print(f"Retrieving results for '{osgb}'...")
                     #logging.info(f"Retrieving results for '{osgb}'...")
 
@@ -1278,10 +1295,16 @@ class SimstockQGIS:
                     bi_ref = self.preprocessed_df.loc[self.preprocessed_df["osgb"] == osgb, "bi"].values[0]
 
                     # Collate the new results
-                    result_vals = [bi_ref]
+                    result_vals = []
+
                     # Get all the thermal zones belonging to this feature (multifloors)
                     thermal_zones = [zone for zone in extracted_results.keys() if osgb in zone]
-                    if len(thermal_zones) != 0: #ignore shading blocks
+
+                    # Initialise lists for calculating totals
+                    elec_tot, heat_tot, cool_tot = [], [], []
+
+                    # Ignore shading blocks
+                    if len(thermal_zones) != 0:
 
                         # Loop through the thermal zones belonging to the feature
                         for j, zone in enumerate(thermal_zones):
@@ -1294,7 +1317,19 @@ class SimstockQGIS:
                             # Collect the results for the thermal zone
                             result_vals.extend(extracted_results[zone])
 
+                            # Append values for calculating totals (needs generalising)
+                            elec_tot.append(extracted_results[zone][-3])
+                            heat_tot.append(extracted_results[zone][-2])
+                            cool_tot.append(extracted_results[zone][-1])
+
+                        # Calculate totals
                         #result_vals.append("r_path_here") #inprogress
+                        elec_tot = round(sum(elec_tot), 2)
+                        heat_tot = round(sum(heat_tot), 2)
+                        cool_tot = round(sum(cool_tot), 2)
+
+                        # Construct the final list of result vals
+                        result_vals = [bi_ref, elec_tot, heat_tot, cool_tot] + result_vals
                     
                     # Put the results with the rest of the attributes ready for adding
                     feature_attrs.extend(result_vals)
@@ -1425,7 +1460,7 @@ class SimstockQGIS:
             attr_types = ["use"]
             self.features = [feature for feature in self.selectedLayer.getFeatures()]
 
-            # Create unique IDs for each feature and ensure they are the same length
+            # Create unique IDs (UIDs) for each feature and ensure they are the same length
             padding = len(str(len(self.features)))
             self.unique_ids = [f"UID{str(i).zfill(padding)}" for i in range(len(self.features))]
             
