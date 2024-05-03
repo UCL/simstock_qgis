@@ -66,7 +66,7 @@ class EP_Run():
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file],
                              cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
         if out.returncode == 1:
-            raise RuntimeError(out.stderr+"\nCheck the err file for %s" % idf_file)
+            raise RuntimeError(out.stderr+f"\nCheck the EnergyPlus err file '{os.path.join(output_path, 'eplusout.err')}'")
         
         # Generate the .rvi file
         self.generate_rvi(output_path)
