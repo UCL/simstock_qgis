@@ -797,6 +797,9 @@ class SimstockQGIS:
         # Extract floor-specific attribute table input data (use columns) if they exist
         dfdict = self.extract_floor_data(dfdict)
 
+        # Strip and lowercase all strings
+        dfdict = self.format_strings(dfdict)
+
         # Save data as csv for Simstock to read
         data = pd.DataFrame(dfdict).rename(columns={"UID":"osgb"})
         data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
@@ -997,6 +1000,37 @@ class SimstockQGIS:
         # Return None if all checks passed
         return
     
+
+
+    def format_strings(self, dfdict):
+        """
+        Applies `lower()` and `strip()` to attributes of string type to make all lowercase and
+        remove trailing whitespace.
+
+        Uses `self.headings` to find the core fields which are str type and then also appends the
+        fields that start with 'FLOOR_'.
+        """
+
+        headings_str = []
+
+        # Loop through self headings
+        for h in self.headings:
+            heading, QVType, _ = h.split("-")
+
+            # Append the fieldname if it is str type and is not the UID field
+            if QVType == "String" and heading != "UID":
+                headings_str.append(heading)
+
+        # Also append all fields starting with 'FLOOR_' which should just be the use fields
+        use_headings = [key for key in dfdict.keys() if key.startswith("FLOOR_")]
+        headings_str.extend(use_headings)
+
+        # Apply .lower() and .strip() to all attributes within identified fields (but skip NULLs)
+        for heading in headings_str:
+            dfdict[heading] = [x.lower().strip() if isinstance(x, str) else x for x in dfdict[heading]]
+
+        return dfdict
+
 
 
     def check_epw(self):
