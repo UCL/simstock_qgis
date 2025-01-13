@@ -261,10 +261,6 @@ class SimstockQGIS:
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         warnings.filterwarnings("ignore", category=ResourceWarning)
         
-        # Update path to packaged eppy
-        self.eppy_dir = os.path.join(self.plugin_dir, "eppy-scripts")
-        sys.path.append(self.eppy_dir)
-        
         # Various check trackers
         self.initial_setup_worked = None #check if initial setup worked
         self.cwd_set = False #check if the user set the cwd
@@ -284,6 +280,21 @@ class SimstockQGIS:
             self.qgis_python_location = os.path.join(qgis_python_dir, "python")
         if self.system == "darwin":
             self.qgis_python_location = os.path.join(qgis_python_dir, "bin", "python3")
+
+        # Update paths to pre-included packages
+        self.scripts_dir = os.path.join(self.plugin_dir, "eppy-scripts")
+        # Use eppy 5.56 if Python version <= 3.9 else use eppy 5.63
+        if sys.version_info.minor <= 9:
+            eppy_dir = os.path.join(self.scripts_dir, "eppy556")
+        else:
+            eppy_dir = os.path.join(self.scripts_dir, "eppy563")
+        munch_dir = os.path.join(self.scripts_dir, "munch250")
+        decorator_dir = os.path.join(self.scripts_dir, "decorator511")
+
+        # Add these to Python path
+        sys.path.append(eppy_dir)
+        sys.path.append(munch_dir)
+        sys.path.append(decorator_dir)
 
         # Set up Eppy
         from eppy.modeleditor import IDF, IDDAlreadySetError
@@ -524,11 +535,11 @@ class SimstockQGIS:
         # TODO: include without zip and check for binaries
 
         # # Unzip psutil as per platform
-        # if not os.path.exists(os.path.join(self.eppy_dir, "psutil")):
+        # if not os.path.exists(os.path.join(self.scripts_dir, "psutil")):
         #     if self.system == "windows" and platform.machine() == "AMD64":
-        #         psutil_zipfile = os.path.join(self.eppy_dir, "psutil_win-64.zip")
+        #         psutil_zipfile = os.path.join(self.scripts_dir, "psutil_win-64.zip")
         #     elif self.system == "darwin" and platform.machine() == "x86_64":
-        #         psutil_zipfile = os.path.join(self.eppy_dir, "psutil_osx-64.zip")
+        #         psutil_zipfile = os.path.join(self.scripts_dir, "psutil_osx-64.zip")
         #     else:
         #         print("Only Windows and macOS x86-64 support psutil. "
         #               f"System: {self.system}-{platform.machine()}.")
@@ -538,10 +549,10 @@ class SimstockQGIS:
         #     if psutil_zipfile is not None:
         #         print("    Extracting psutil...")
         #         with ZipFile(psutil_zipfile, "r") as fp:
-        #             fp.extractall(self.eppy_dir)
+        #             fp.extractall(self.scripts_dir)
 
         #         # Delete all psutil zipfiles
-        #         [os.remove(f) for f in os.scandir(self.eppy_dir) if f.name[-4:]==".zip"]
+        #         [os.remove(f) for f in os.scandir(self.scripts_dir) if f.name[-4:]==".zip"]
         
 
         # Module tests
