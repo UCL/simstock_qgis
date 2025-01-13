@@ -21,7 +21,6 @@
  *                                                                         *
  ***************************************************************************/
 """
-from unittest import result
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant, QUrl
 from qgis.PyQt.QtGui import QIcon, QDesktopServices
 from qgis.PyQt.QtWidgets import QAction
@@ -34,14 +33,10 @@ from .resources import *
 from .Simstock_QGIS_dialog import SimstockQGISDialog
 import os
 
-#my imports
-#import venv
+# My imports
 import subprocess
 import platform
 import sys
-#sys.path.insert(0, os.path.dirname(__file__))
-import pandas as pd
-#import multiprocessing as mp
 import qgis.utils
 from qgis.core import Qgis
 from qgis.core import NULL as qgis_null
@@ -53,6 +48,15 @@ from zipfile import ZipFile
 import logging
 from logging.handlers import RotatingFileHandler
 import warnings
+
+# Pandas can cause problems in certain versions of QGIS
+# This clause allows the plugin to be installed
+# Import will be checked again in the initial setup routines
+try:
+    import pandas as pd
+except:
+    pass
+
 
 class SimstockQGIS:
     """QGIS Plugin Implementation."""
@@ -556,7 +560,14 @@ class SimstockQGIS:
         
 
         # Module tests
-        print("Pandas version: ", pd.__version__)
+        try:
+            print("Pandas version: ", pd.__version__)
+        except:
+            self.initial_tests.append("Pandas could not be imported. This is likely due to the "
+                                      "QGIS version (this problem already exists as an issue on "
+                                      "the official QGIS GitHub).\n"
+                                      "To fix this, try updating the version of QGIS.")
+
         try:
             import eppy
             print("Eppy version: ", eppy.__version__)
@@ -768,6 +779,17 @@ class SimstockQGIS:
             if not self.initial_setup_worked:
                 print("Warning: Initial setup previously failed - Simstock may not function correctly.")
         
+        # Pandas check in case initial setup was not run
+        try:
+            _ = pd.DataFrame()
+        except:
+            self.push_msg("Pandas could not be imported",
+                          "This is likely due to the QGIS "
+                          "version (this problem already exists as an issue on the "
+                          "official QGIS GitHub).\n"
+                          "To fix this, try updating the version of QGIS.")
+            return
+
         # Check if user cwd has been set
         if not self.cwd_set:
             self.push_msg(title="CWD not set!",
