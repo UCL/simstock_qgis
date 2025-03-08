@@ -401,8 +401,9 @@ class SimstockQGIS:
             if self.system == "windows":
                 ep_files = ["Energy+.idd", "energyplus.exe", "energyplusapi.dll", "ReadVarsESO.exe"]
             elif self.system == "darwin":
-                ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib", "libgcc_s.1.dylib",
-                            "libgfortran.3.dylib", "libquadmath.0.dylib", "ReadVarsESO"]
+                ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib",
+                            "libgcc_s.1.dylib", "libgfortran.3.dylib", "libquadmath.0.dylib",
+                            "ReadVarsESO"]
 
             # Initialise dictionary
             d = {}
@@ -465,7 +466,9 @@ class SimstockQGIS:
                 # Get user's permission before downloading EnergyPlus
                 self.ask_permission()
                 if self.permission == "n":
-                    self.push_msg("Initial setup failed","User permission not granted to download EnergyPlus.", duration=20)
+                    self.push_msg("Initial setup failed",
+                                  "User permission not granted to download EnergyPlus.",
+                                  duration=20)
                     self.initial_tests_warnings.append("User permission not granted to download EnergyPlus.")
                     logging.warning("User permission not granted to download EnergyPlus.")
                     return
@@ -615,9 +618,9 @@ class SimstockQGIS:
             # Call the sh script to bypass all the security warnings that occur when running E+
             mac_verify_ep_result = subprocess.run(["bash", mac_verify_ep], capture_output=True)
             if mac_verify_ep_result.returncode != 0:
-                msg = ("Mac verify EnergyPlus sh script failed, but if",
-                      "EnergyPlus runs correctly then this is not a problem.",
-                      "It is possible that the initial setup was already run before.")
+                msg = ("Mac verify EnergyPlus sh script failed, but if ",
+                       "EnergyPlus runs correctly then this is not a problem. ",
+                       "It is possible that the initial setup was already run before.")
                 stderr = mac_verify_ep_result.stderr.decode("utf-8")
                 print(msg)
                 self.initial_tests_warnings.append(stderr)
@@ -643,7 +646,7 @@ class SimstockQGIS:
         # Try running EP
         try:
             run_ep_test = subprocess.run([self.energyplusexe, '-r','-d', shoebox_output, '-w', epw_file, "shoebox.idf"],
-                                        cwd=self.plugin_dir)
+                                         cwd=self.plugin_dir)
         except:
             # The above will fail if EP was not found
             pass
@@ -667,7 +670,8 @@ class SimstockQGIS:
 
         # Test that the QGIS Python works via subprocess
         run_python_test = subprocess.run([self.qgis_python_location, test_python],
-                                         capture_output=True, text=True)
+                                         capture_output=True,
+                                         text=True)
         if run_python_test.stdout != "success\n":
             self.initial_tests.append("Python could not be run.")
         else:
@@ -732,7 +736,7 @@ class SimstockQGIS:
 
 
 
-    def push_msg(self, title, text, qgislevel=Qgis.Critical, printout=True, duration=None):
+    def push_msg(self, title, text, qgislevel=Qgis.Critical, printout=True, duration=-1):
         """
         Pushes a message to QGIS (and the Python console if printout is True).
 
@@ -748,16 +752,10 @@ class SimstockQGIS:
         if printout:
             print(title + ": " + text)
 
-        if duration is None:
-            self.iface.messageBar().pushMessage(title,
-                                                text,
-                                                level=qgislevel,
-                                                duration=-1)
-        else:
-            self.iface.messageBar().pushMessage(title,
-                                                text, 
-                                                level=qgislevel,
-                                                duration=duration)
+        self.iface.messageBar().pushMessage(title,
+                                            text, 
+                                            level=qgislevel,
+                                            duration=duration)
 
 
 
@@ -784,9 +782,8 @@ class SimstockQGIS:
             _ = pd.DataFrame()
         except:
             self.push_msg("Pandas could not be imported",
-                          "This is likely due to the QGIS "
-                          "version (this problem already exists as an issue on the "
-                          "official QGIS GitHub).\n"
+                          "This is likely due to the QGIS version (this problem already exists as "
+                          "an issue on the official QGIS GitHub).\n"
                           "To fix this, try updating the version of QGIS.")
             return
 
@@ -851,7 +848,7 @@ class SimstockQGIS:
         # Run E+ simulation, generate .rvi files and run ReadVarsESO
         unique_bis = self.preprocessed_df[self.preprocessed_df["shading"]==False]["bi"].unique()
         self.idf_files = [os.path.join(self.idf_dir, f"{bi}.idf") for bi in unique_bis]
-        self.idf_result_dirs = self.run_simulation(multiprocessing = self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
+        self.idf_result_dirs = self.run_simulation(multiprocessing=self.dlg.cbMulti.isChecked()) #check if mp checkbox is ticked
         if self.idf_result_dirs is None:
             return
 
@@ -957,7 +954,8 @@ class SimstockQGIS:
 
         # Check for duplicate UIDs
         if len(dfdict["UID"]) != len(set(dfdict["UID"])):
-            return f"Duplicate UIDs detected! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again."
+            return ("Duplicate UIDs detected! Do not edit the UID column.\n"
+                    "To regenerate these, delete the entire column and use 'Add Fields' again.")
 
         # Check values which are required for all polygons
         for y, value in enumerate(dfdict["shading"]):
@@ -965,11 +963,13 @@ class SimstockQGIS:
             # TODO: Change shading field type to bool?
             # Shading invalid
             if isinstance(value, str) and value.lower() not in ["false", "true"]:
-                return (f"Values in the 'shading' field should be 'true' or 'false'.\nReceived: '{value}' for {dfdict['UID'][y]}.")
+                return ("Values in the 'shading' field should be 'true' or 'false'.\n"
+                       f"Received: '{value}' for {dfdict['UID'][y]}.")
             
             # Shading missing
             if isinstance(value, QVariant):
-                return (f"Values in the 'shading' field should be 'true' or 'false'.\nCheck value for {dfdict['UID'][y]}.")
+                return ("Values in the 'shading' field should be 'true' or 'false'.\n"
+                       f"Check value for {dfdict['UID'][y]}.")
             
             # Height missing
             if isinstance(dfdict["height"][y], QVariant):
@@ -981,7 +981,8 @@ class SimstockQGIS:
             
             # UID missing
             if dfdict["UID"][y] == "":
-                return ("UID(s) missing! Do not edit the UID column.\nTo regenerate these, delete the entire column and use 'Add Fields' again.")
+                return ("UID(s) missing! Do not edit the UID column.\n"
+                        "To regenerate these, delete the entire column and use 'Add Fields' again.")
         
 
         # Check if all polygons are shading
@@ -1098,9 +1099,7 @@ class SimstockQGIS:
         #qgis.utils.iface.messageBar().pushMessage("Running simulation", "EnergyPlus simulation has started...", level=Qgis.Info, duration=3)
 
         # List of output directory names
-        idf_result_dirs = []
-        for idf_path in self.idf_files:
-            idf_result_dirs.append(idf_path[:-4])
+        idf_result_dirs = [i[:-4] for i in self.idf_files]
 
         # Simulate
         simulationscript = os.path.join(self.plugin_dir, "mptest.py")
@@ -1631,7 +1630,8 @@ class SimstockQGIS:
 
         # Find database csvs which contain the default setup idf objects
         self.database_dir = os.path.join(self.plugin_dir, "Database")
-        database_csvs = [file for file in os.scandir(self.database_dir) if file.name[-4:] == ".csv" if file.name[:len(self.database_tag)] == self.database_tag]
+        database_csvs = [file for file in os.scandir(self.database_dir)
+                         if file.name[-4:] == ".csv" if file.name[:len(self.database_tag)] == self.database_tag]
         database_layer_names = [file.name[:-4] for file in database_csvs] #TODO: remove and use .name method in place
 
         # If the database gpkg doesn't exit, create it from the csvs
