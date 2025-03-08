@@ -666,7 +666,10 @@ class SimstockQGIS:
             # Note: this will fail if EP failed to run - this does not necessarily indicate a 
             # problem with ReadVarsESO
             self.initial_tests.append("ReadVarsESO failed to run.")
-        
+
+        # Delete EP test files
+        if os.path.exists(shoebox_output):
+            shutil.rmtree(shoebox_output)
 
         # Test that the QGIS Python works via subprocess
         run_python_test = subprocess.run([self.qgis_python_location, test_python],
@@ -703,10 +706,6 @@ class SimstockQGIS:
                           qgislevel=Qgis.Success,
                           duration=20)
             logging.info("Initial setup completed successfully")
-
-            # Delete test files
-            if os.path.exists(shoebox_output):
-                shutil.rmtree(shoebox_output)
 
 
 
