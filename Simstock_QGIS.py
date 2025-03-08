@@ -656,12 +656,14 @@ class SimstockQGIS:
             self.initial_tests.append("EnergyPlus could not run.")
         else:
             print("EnergyPlus test completed successfully")
+            logging.info("EnergyPlus test completed successfully")
         
 
         # Run a test to see if ReadVarsESO works
         try:
             subprocess.run([self.readvarseso], cwd=shoebox_output, check=True)
             print("ReadVarsESO test completed successfully")
+            logging.info("ReadVarsESO test completed successfully")
         except:
             # Note: this will fail if EP failed to run - this does not necessarily indicate a 
             # problem with ReadVarsESO
@@ -679,6 +681,7 @@ class SimstockQGIS:
             self.initial_tests.append("Python could not be run.")
         else:
             print("Python test completed successfully")
+            logging.info("Python test completed successfully")
         
 
         # Check if any tests failed and report these if necessary
@@ -705,6 +708,7 @@ class SimstockQGIS:
                           "Initial setup completed successfully. Please restart QGIS.",
                           qgislevel=Qgis.Success,
                           duration=20)
+            logging.warning(f"Initial setup warnings:\n{self.initial_tests_warnings}")
             logging.info("Initial setup completed successfully")
 
 
