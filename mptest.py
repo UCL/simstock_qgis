@@ -16,8 +16,6 @@
 """
 
 import multiprocessing as mp
-#import numpy as np
-#import time
 import os
 import platform
 import subprocess
@@ -57,16 +55,23 @@ class EP_Run():
         if system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(system))
             self.readvarseso   = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(system))
-        
+
+
     def run_ep(self, idf_file):
         output_dir = idf_file[:-4]
         output_path = os.path.join(self.idf_dir, output_dir)
 
+        # Delete existing results csv
+        if os.path.exists(os.path.join(output_path, "eplusout.csv")):
+            os.remove(os.path.join(output_path, "eplusout.csv"))
+
         # Run the EnergyPlus simulation
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file],
                              cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
-        if out.returncode == 1:
-            raise RuntimeError(out.stderr+f"\nCheck the EnergyPlus err file '{os.path.join(output_path, 'eplusout.err')}'")
+        if out.returncode != 0:
+            return os.path.join(output_path, 'eplusout.err')
+            #raise RuntimeError(f"EnergyPlus simulation of {output_dir} failed.\n"
+            #                   f"Check the EnergyPlus err file '{os.path.join(output_path, 'eplusout.err')}'")
         
         # Generate the .rvi file
         self.generate_rvi(output_path)
@@ -74,32 +79,40 @@ class EP_Run():
         # Call ReadVarsESO to produce the results csv
         self.run_readvarseso(output_path)
 
+
     @staticmethod
     def generate_rvi(output_path):
         with open (os.path.join(output_path, "results-rvi.rvi"), "w") as f:
             f.write("eplusout.eso\neplusout.csv\n0")
 
+
     def run_readvarseso(self, output_path):
         subprocess.run([self.readvarseso, "results-rvi.rvi", "unlimited"], cwd=output_path)
-        
+
+
     def run_ep_multi(self, cores):
         p = mp.Pool(cores)
-        p.map(self.run_ep, self.idf_files)
+        errs = p.map(self.run_ep, self.idf_files)
         p.close()
+        return errs
+
 
     def run_ep_single(self):
+        errs = []
         for i, idf_file in enumerate(self.idf_files):
             print(f"Starting simulation {i+1} of {len(self.idf_files)}")
-            self.run_ep(idf_file)
+            errs.append(self.run_ep(idf_file))
+        return errs
 
-    
+
+
 def main():
     cwd = args.cwd
     runner = EP_Run(cwd)
 
     # Single-core simulation
     if args.singlecore:
-        runner.run_ep_single()
+        errs = runner.run_ep_single()
     
     # Multi-core simulation
     else:
@@ -107,7 +120,10 @@ def main():
             cores = pu.cpu_count(logical=False) - 1 #use one less core than available
         except:
             cores = mp.cpu_count() - 1
-        runner.run_ep_multi(cores)
+        errs = runner.run_ep_multi(cores)
+
+    errs = [e for e in errs if e is not None]
+
 
 if __name__ == '__main__':
     main()
