@@ -921,6 +921,8 @@ class SimstockQGIS:
 
         Expects this to be in the format "FLOOR_X: use".
         """
+        # TODO: What happens later down the line if use cols for only some of the floors are missing?
+
         max_floors = max(dfdict["nofloors"])
         for x in range(max_floors):
             heading = f"FLOOR_{x+1}: use"
@@ -1849,7 +1851,7 @@ class SimstockQGIS:
                 add_materials(key, df, used_materials)
 
         # Check whether heating and cooling setpoints are to be included
-        self.HeatCool = str(dfs["DB-HeatingCooling-OnOff"].iloc[0,0])
+        self.HeatCool = str(dfs["DB-HeatingCooling-OnOff"].iloc[0,0]).strip()
         if not isinstance(self.HeatCool, str):
             print("type ", type(self.HeatCool), self.HeatCool)
             raise NotImplementedError(f"self.HeatCool is {type(self.HeatCool)} type")
