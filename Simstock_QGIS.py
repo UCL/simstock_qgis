@@ -19,7 +19,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant, QUrl
 from qgis.PyQt.QtGui import QIcon, QDesktopServices
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtWidgets import QAction, QMessageBox, QInputDialog, QWidget
 
 from qgis.core import QgsProject, QgsVectorDataProvider, QgsVectorLayer, QgsField, QgsFields, QgsVectorFileWriter, QgsCoordinateTransformContext, QgsApplication
 
@@ -752,6 +752,8 @@ class SimstockQGIS:
 
         If no duration is specified, message will persist indefinitely.
         """
+        # TODO: Use QMessageBox
+        # TODO: Include logging here to avoid having to do both manually
 
         if printout:
             print(title + ": " + text)
@@ -760,6 +762,30 @@ class SimstockQGIS:
                                             text, 
                                             level=qgislevel,
                                             duration=duration)
+
+
+
+    # def show_messages():
+    #     QMessageBox.information(None, "Info", "This is an info message.")
+    #     QMessageBox.warning(None, "Warning", "This is a warning.")
+    #     QMessageBox.critical(None, "Critical", "This is a critical error!")
+    #     reply = QMessageBox.question(None, "Confirm", "Do you want to continue?", 
+    #                                 QMessageBox.Yes | QMessageBox.No)
+    #     if reply == QMessageBox.Yes:
+    #         print("User clicked Yes")
+    #     else:
+    #         print("User clicked No")
+
+
+
+    # def get_user_input():
+    #     text, ok = QInputDialog.getText(None, "Enter Email", "Email:", text="user@example.com")
+    #     if ok and text:  # If user clicked OK and entered something
+    #         print(f"User entered: {text}")
+    #         return text
+    #     else:
+    #         print("User cancelled or entered nothing")
+    #         return None  # Handle cases where input is empty or cancelled
 
 
 
@@ -793,9 +819,12 @@ class SimstockQGIS:
 
         # Check if user cwd has been set
         if not self.cwd_set:
-            self.push_msg(title="CWD not set!",
-                          text="Please set the cwd before attempting to run Simstock.",
-                          duration=5)
+            # self.push_msg(title="CWD not set!",
+            #               text="Please set the cwd before attempting to run Simstock.",
+            #               duration=5)
+            QMessageBox.critical(None, "CWD not set!",
+                                 "Curent working directory not set! Please set the cwd before "
+                                 "attempting to run Simstock.")
             return
         
         # Announce start of process
@@ -862,10 +891,12 @@ class SimstockQGIS:
         success = self.add_new_layer(results_mode=True)
 
         if success:
-            self.push_msg("Simstock completed",
-                          "Simstock has completed successfully.",
-                          qgislevel=Qgis.Success,
-                          duration=60)
+            # self.push_msg("Simstock completed",
+            #               "Simstock has completed successfully.",
+            #               qgislevel=Qgis.Success,
+            #               duration=10)
+            QMessageBox.information(None, "Simstock completed",
+                                    "Simstock has completed successfully.")
             logging.info("Simstock completed successfully\n")
 
 
