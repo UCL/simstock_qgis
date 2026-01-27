@@ -312,7 +312,7 @@ class SimstockQGIS:
         # Format is: "heading-QVariantType-dummyvalue"
         self.headings = ["polygon-None-None",
                          "UID-String-None",
-                         "shading-String-false",
+                         "shading-Bool-false",
                          "height-Double-3.0",
                          "wwr-Double-12",
                          "nofloors-Int-1",
@@ -963,7 +963,6 @@ class SimstockQGIS:
         # Check values which are required for all polygons
         for y, value in enumerate(dfdict["shading"]):
 
-            # TODO: Change shading field type to bool?
             # Shading invalid
             if isinstance(value, str) and value.lower() not in ["false", "true"]:
                 return ("Values in the 'shading' field should be 'true' or 'false'.\n"
@@ -989,7 +988,7 @@ class SimstockQGIS:
         
 
         # Check if all polygons are shading
-        if len(set(dfdict["shading"])) == 1 and list(set(dfdict["shading"]))[0].lower() == "true":
+        if len(set(dfdict["shading"])) == 1 and str(list(set(dfdict["shading"]))[0]).lower() == "true":
             return ("Polygons cannot all be shading! Ensure that some are set to 'false'.")
 
 
