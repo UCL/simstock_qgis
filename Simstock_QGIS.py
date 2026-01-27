@@ -44,6 +44,7 @@ from zipfile import ZipFile
 import logging
 from logging.handlers import RotatingFileHandler
 import warnings
+from functools import reduce
 
 # Pandas can cause problems in certain versions of QGIS
 # This clause allows the plugin to be installed
@@ -1190,6 +1191,7 @@ class SimstockQGIS:
             containing all results for that zone.
             """
             all_results = {}
+            dfs = []
 
             # Loop through result directories
             for dirpath in self.idf_result_dirs:
@@ -1209,6 +1211,7 @@ class SimstockQGIS:
                     logging.critical(f"Results for '{os.path.basename(dirpath)}' not found.")
                     return
                 df = pd.read_csv(results_csv)
+                dfs.append(df)
                 
                 # Load corresponding idf file with same name
                 idf = IDF(dirpath + ".idf")
@@ -1224,7 +1227,7 @@ class SimstockQGIS:
                     #zone_df["results_path"] = dirpath #add path to results #inprogress
                     all_results[zone] = zone_df
 
-            return all_results
+            return all_results, dfs
 
 
         def extract_results(all_results):
@@ -1530,11 +1533,15 @@ class SimstockQGIS:
         if results_mode:
             # Needs generalising
             # Extract all results from the csvs by thermal zone
-            all_results = make_allresults_dict()
+            all_results, dfs = make_allresults_dict()
 
             # Return False if error encountered
             if all_results is None:
                 return False
+            
+            # Output full results in cwd for external analysis
+            df_merged = reduce(lambda left, right: pd.merge(left, right, on="Date/Time", how="outer"), dfs)
+            df_merged.to_csv(os.path.join(self.user_cwd, "Simstock_Results_Full.csv"), index=False)
 
             # Load config stuff and constants required for post-processing
             self.low_temp_threshold = float(self.config["Low temperature threshold"])
