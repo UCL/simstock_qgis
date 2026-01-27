@@ -735,7 +735,12 @@ class SimstockQGIS:
 
 
 
-    def push_msg(self, title, text, qgislevel=Qgis.Critical, printout=True, duration=-1):
+    def push_msg(self,
+                 title,
+                 text,
+                 qgislevel=Qgis.Critical,
+                 printout=True,
+                 duration=-1):
         """
         Pushes a message to QGIS (and the Python console if printout is True).
 
@@ -795,9 +800,9 @@ class SimstockQGIS:
         
         # Announce start of process
         self.push_msg("Simstock running",
-                        "Simstock is currently running. Please wait...",
-                        qgislevel=Qgis.Info,
-                        duration=5)
+                      "Simstock is currently running. Please wait...",
+                      qgislevel=Qgis.Info,
+                      duration=5)
         logging.info("Plugin process started")
 
 
@@ -1700,7 +1705,7 @@ class SimstockQGIS:
         self.push_msg("CWD set",
                      f"Current working directory (cwd) set to: {self.user_cwd}",
                       qgislevel=Qgis.Info,
-                      duration=8)
+                      duration=5)
 
 
 
