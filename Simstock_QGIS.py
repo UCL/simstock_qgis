@@ -847,13 +847,6 @@ class SimstockQGIS:
         dfdict = self.extract_data()
         if dfdict is None:
             return
-
-        # Attribute table input data checks
-        dc_message = self.data_checks(dfdict)
-        if dc_message is not None:
-            self.push_msg("Input data problem", dc_message)
-            logging.critical(f"Input data problem: {dc_message}")
-            return
         
         # Check that epw file exists
         if not self.check_epw():
@@ -861,9 +854,18 @@ class SimstockQGIS:
 
         # Extract floor-specific attribute table input data (use columns) if they exist
         dfdict = self.extract_floor_data(dfdict)
+        if dfdict is None:
+            return
 
         # Strip and lowercase all strings
         dfdict = self.format_strings(dfdict)
+
+        # Attribute table input data checks
+        dc_message = self.data_checks(dfdict)
+        if dc_message is not None:
+            self.push_msg("Input data problem", dc_message)
+            logging.critical(f"Input data problem: {dc_message}")
+            return
 
         # Save data as csv for Simstock to read
         data = pd.DataFrame(dfdict).rename(columns={"UID":"osgb"})
