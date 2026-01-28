@@ -45,6 +45,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import warnings
 from functools import reduce
+import datetime
 
 # Pandas can cause problems in certain versions of QGIS
 # This clause allows the plugin to be installed
@@ -1539,9 +1540,10 @@ class SimstockQGIS:
             if all_results is None:
                 return False
             
-            # Output full results in cwd for external analysis
+            # Output full results csv in cwd for external analysis
             df_merged = reduce(lambda left, right: pd.merge(left, right, on="Date/Time", how="outer"), dfs)
-            df_merged.to_csv(os.path.join(self.user_cwd, "Simstock_Results_Full.csv"), index=False)
+            df_merged = df_merged[["Date/Time"]+sorted(list(df_merged.columns)[1:])] #TODO: could sort by UID instead
+            df_merged.to_csv(os.path.join(self.user_cwd, f"Simstock_Results_{get_date()}_{get_time()}.csv"), index=False)
 
             # Load config stuff and constants required for post-processing
             self.low_temp_threshold = float(self.config["Low temperature threshold"])
@@ -1919,7 +1921,22 @@ class SimstockQGIS:
 
         # Save idf
         idf.saveas(os.path.join(self.plugin_dir, 'basic_settings.idf'))
-        
+
+
+
+def get_date():
+    return datetime.datetime.now().strftime("%Y-%m-%d")
+
+
+
+def get_time(ms=False):
+    if not ms:
+        return datetime.datetime.now().strftime("%H-%M-%S")
+    else:
+        return datetime.datetime.now().strftime("%H-%M-%S-%f")
+
+
+
 """
 # For creating the csvt files:
 lst = ['"String"']*103
