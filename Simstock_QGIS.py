@@ -913,16 +913,23 @@ class SimstockQGIS:
         """
         # Get layer, check exists and format
         self.selectedLayer = self.dlg.mMapLayerComboBox.currentLayer()
+        logging.info(f"Selected layer for extraction: '{self.selectedLayer.name()}'")
+
         if self.selectedLayer is None:
-            self.push_msg("Layer does not exist.", "")
+            self.push_msg("Selected layer does not exist.", "")
+            logging.critical("Selected layer does not exist.")
             return
+
         if not isinstance(self.selectedLayer, QgsVectorLayer):
             self.push_msg("Simstock expects a Vector Layer as input.",
                          f"'{self.selectedLayer.name()}' is not a vector layer.")
+            logging.critical(f"'{self.selectedLayer.name()}' is not a vector layer.")
             return
+
         if not self.selectedLayer.isSpatial():
             self.push_msg("Layer has no geometry.",
                          f"'{self.selectedLayer.name()}' has no geometry.")
+            logging.critical(f"'{self.selectedLayer.name()}' has no geometry.")
             return
 
         # Extract features from layer
