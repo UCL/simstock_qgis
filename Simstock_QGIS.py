@@ -316,7 +316,7 @@ class SimstockQGIS:
                          "UID-String-None",
                          "shading-Bool-false",
                          "height-Double-3.0",
-                         "wwr-Double-12",
+                         "wwr-Int-12",
                          "nofloors-Int-1",
                          "wall_const-String-wall_cavity_uninsulated",
                          "roof_const-String-roof_flat_uninsulated",
