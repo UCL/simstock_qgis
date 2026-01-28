@@ -1534,11 +1534,15 @@ class SimstockQGIS:
         if results_mode:
             # Needs generalising
             # Extract all results from the csvs by thermal zone
-            all_results, dfs = make_allresults_dict()
+            all_resultsdfs = make_allresults_dict()
 
             # Return False if error encountered
-            if all_results is None:
+            if all_resultsdfs is None:
                 return False
+
+            # Unpack only if not None
+            else:
+                all_results, dfs = all_resultsdfs
             
             # Output full results csv in cwd for external analysis
             df_merged = reduce(lambda left, right: pd.merge(left, right, on="Date/Time", how="outer"), dfs)
