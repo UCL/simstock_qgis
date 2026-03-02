@@ -21,11 +21,20 @@
     converted via Munch.to/fromDict().
 """
 
-import pkg_resources
-
 from .python3_compat import iterkeys, iteritems, Mapping, u
 
-__version__ = pkg_resources.get_distribution('munch').version
+### CUSTOM EDIT TO AVOID ERROR ON QGIS 3.40
+try:
+    import pkg_resources
+    __version__ = pkg_resources.get_distribution('munch').version
+except:
+    try:
+        from importlib.metadata import version
+        __version__ = version("munch")
+    except:
+        __version__ = "unknown"
+###
+
 VERSION = tuple(map(int, __version__.split('.')[:3]))
 
 __all__ = ('Munch', 'munchify', 'DefaultMunch', 'DefaultFactoryMunch', 'unmunchify')
