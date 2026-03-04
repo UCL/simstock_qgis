@@ -1210,14 +1210,14 @@ class SimstockQGIS:
                 # TODO: allow continuation even if EP fails, and load NULL results for that BI
                 results_csv=os.path.join(dirpath, "eplusout.csv")
                 if not os.path.exists(results_csv) or os.path.getsize(results_csv)==0:
+                    errfile = os.path.join(dirpath, "eplusout.err")
                     # self.push_msg(f"Results for '{os.path.basename(dirpath)}' not found.",
                     #               f"Check '{os.path.join(dirpath, "eplusout.err")}' "
                     #                "EnergyPlus error report file.")
                     QMessageBox.critical(None, f"Results for '{os.path.basename(dirpath)}' not found.",
                                          f"Results for '{os.path.basename(dirpath)}' not found. "
                                           "Check the relevant EnergyPlus error report file.\n\n"
-                                          "This can be found at the following path:\n"
-                                         f"'{os.path.join(dirpath, "eplusout.err")}'.")
+                                         f"This can be found at the following path:\n'{errfile}'.")
                     logging.critical(f"Results for '{os.path.basename(dirpath)}' not found.")
                     return
                 df = pd.read_csv(results_csv)
