@@ -65,6 +65,10 @@ class EP_Run():
         if os.path.exists(os.path.join(output_path, "eplusout.csv")):
             os.remove(os.path.join(output_path, "eplusout.csv"))
 
+        # Same for eso file
+        if os.path.exists(os.path.join(output_path, "eplusout.eso")):
+            os.remove(os.path.join(output_path, "eplusout.eso"))
+
         # Run the EnergyPlus simulation
         out = subprocess.run([self.energyplusexe, '-d', output_dir, '-w', self.epw_file, idf_file],
                              cwd = self.idf_dir, capture_output=True, text=True) #no readvarseso
