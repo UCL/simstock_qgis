@@ -266,8 +266,9 @@ class SimstockQGIS:
         # Various check trackers
         self.initial_setup_worked = None #check if initial setup worked
         self.cwd_set = False #check if the user set the cwd
-        
-        # Startup E+ stuff
+
+
+        ### ENERGYPLUS
         self.EP_DIR = os.path.join(self.plugin_dir, "EnergyPlus")
 
         # Find the computer's operating system and find energyplus version
@@ -275,21 +276,45 @@ class SimstockQGIS:
         if self.system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
             self.readvarseso = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(self.system))
-        
-        # Locate QGIS Python, differs by OS
-        qgis_python_dir = sys.exec_prefix
-        if self.system == "windows":
-            self.qgis_python_location = os.path.join(qgis_python_dir, "python")
-        if self.system == "darwin":
-            self.qgis_python_location = os.path.join(qgis_python_dir, "bin", "python3")
 
+
+        ### LOCATE QGIS PYTHON
+        if self.system == "windows":
+            qgis_python_dir = sys.exec_prefix
+            self.qgis_python_location = os.path.join(qgis_python_dir, "python")
+
+        if self.system == "darwin":
+            # sys.executable gives the QGIS location e.g. /Applications/QGIS.app/Contents/MacOS/QGIS
+            qgis_python_dir = os.path.dirname(sys.executable) #remove the /QGIS
+
+            # Possible QGIS Python locations on MacOS
+            self.qgis_python_location = None
+            candidates = [
+                os.path.join(qgis_python_dir, "bin", "python3"),
+                os.path.join(qgis_python_dir, "python"),
+            ]
+
+            # If not found, try second possible location
+            for c in candidates:
+                if os.path.exists(c):
+                    self.qgis_python_location = c
+                    break
+
+            # Check if a Python was found
+            if self.qgis_python_location is None:
+                raise Exception("The internal QGIS Python was not found!")
+
+
+        ### INCLUDED PACKAGES
         # Update paths to pre-included packages
         self.scripts_dir = os.path.join(self.plugin_dir, "eppy-scripts")
+
         # Use eppy 5.56 if Python version <= 3.9 else use eppy 5.63
         if sys.version_info.minor <= 9:
             eppy_dir = os.path.join(self.scripts_dir, "eppy556")
         else:
             eppy_dir = os.path.join(self.scripts_dir, "eppy563")
+
         munch_dir = os.path.join(self.scripts_dir, "munch250")
         decorator_dir = os.path.join(self.scripts_dir, "decorator511")
 
@@ -307,6 +332,8 @@ class SimstockQGIS:
         except IDDAlreadySetError:
             pass
 
+
+        ### OTHER
         # The prepended tag on database files used to identify them
         self.database_tag = "DB-"
 
