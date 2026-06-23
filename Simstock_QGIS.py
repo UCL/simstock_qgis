@@ -273,6 +273,7 @@ class SimstockQGIS:
 
         # Find the computer's operating system and find energyplus version
         self.system = platform.system().lower()
+        self.ep_plat_dir = os.path.join(self.EP_DIR, f"ep8.9_{self.system}")
         if self.system in ['windows', 'linux', 'darwin']:
             self.energyplusexe = os.path.join(self.EP_DIR, 'ep8.9_{}/energyplus'.format(self.system))
             self.readvarseso = os.path.join(self.EP_DIR, 'ep8.9_{}/ReadVarsESO'.format(self.system))
@@ -401,6 +402,58 @@ class SimstockQGIS:
 
 
 
+    def locate_ep_files(self, printout=True):
+        """
+        Locates all required EnergyPlus files.
+
+        Returns a dictionary where the key is the name of the required file, and the value
+        states True or False to indicate whether the file was found or not.
+        """
+        # List of required EP files according to platform
+        if self.system == "windows":
+            ep_files = [
+                "Energy+.idd",
+                "energyplus.exe",
+                "energyplusapi.dll",
+                "ReadVarsESO.exe"
+                ]
+
+        elif self.system == "darwin":
+            ep_files = [
+                "Energy+.idd",
+                "energyplus",
+                "libenergyplusapi.8.9.0.dylib",
+                "libgcc_s.1.dylib",
+                "libgfortran.3.dylib",
+                "libquadmath.0.dylib",
+                "ReadVarsESO"
+                ]
+
+        # Initialise dictionary
+        d = {}
+        for x in ep_files:
+            d[x] = True
+
+        # Loop over required files list
+        for f in d.keys():
+            fp = os.path.join(self.ep_plat_dir, f)
+            if os.path.exists(fp):
+                if printout:
+                    print(f"Located '{f}'")
+            else:
+                # Move file if not in expected directory
+                fp = os.path.join(self.ep_plat_dir, "PostProcess", f)
+                if os.path.exists(fp):
+                    if printout:
+                        print(f"Located '{f}'")
+                    shutil.move(fp, os.path.join(self.ep_plat_dir, f))
+                else:
+                    # Change val to False if the file was not found
+                    d[f] = False
+        return d
+
+
+
     def initial_setup(self):
         # TODO:
         #   - Print out more useful information in the case that failures occured. This will be 
@@ -414,50 +467,11 @@ class SimstockQGIS:
         # Tracks unimportant issues, unless something fails in which case could be useful to debug
         self.initial_tests_warnings = [] 
 
-
-        def locate_ep_files():
-            """
-            Locates all required EnergyPlus files.
-
-            Returns a dictionary where the key is the name of the required file, and the value
-            states True or False to indicate whether the file was found or not.
-            """
-            # List of required EP files according to platform
-            if self.system == "windows":
-                ep_files = ["Energy+.idd", "energyplus.exe", "energyplusapi.dll", "ReadVarsESO.exe"]
-            elif self.system == "darwin":
-                ep_files = ["Energy+.idd", "energyplus", "libenergyplusapi.8.9.0.dylib",
-                            "libgcc_s.1.dylib", "libgfortran.3.dylib", "libquadmath.0.dylib",
-                            "ReadVarsESO"]
-
-            # Initialise dictionary
-            d = {}
-            for x in ep_files:
-                d[x] = True
-
-            # Loop over required files list
-            for f in d.keys():
-                fp = os.path.join(self.ep_plat_dir, f)
-                if os.path.exists(fp):
-                    print(f"Located '{f}'")
-                else:
-                    # Move file if not in expected directory
-                    fp = os.path.join(self.ep_plat_dir, "PostProcess", f)
-                    if os.path.exists(fp):
-                        print(f"Located '{f}'")
-                        shutil.move(fp, os.path.join(self.ep_plat_dir, f))
-                    else:
-                        # Change val to False if the file was not found
-                        d[f] = False
-            return d
-
-
         # This is to select a different EnergyPlus source
         ep_source = "download" # "packaged" or "download" or "user"
-        self.ep_plat_dir = os.path.dirname(self.energyplusexe)
 
         # If not all required EP files were found, source these externally
-        if not all(locate_ep_files().values()):
+        if not all(self.locate_ep_files().values()):
 
             if ep_source == "packaged":
                 # Unzip EnergyPlus according to platform
@@ -505,7 +519,7 @@ class SimstockQGIS:
 
                     # Download EnergyPlus if permission given
                     if not os.path.exists(EP_zipfile):
-                        r = requests.get(ep_link, stream=True)
+                        r = requests.get(ep_link, stream=True) #TODO: add timeout
                         if r.ok:
                             print("Downloading EnergyPlus...")
                             with open(EP_zipfile, "wb") as f:
@@ -539,7 +553,7 @@ class SimstockQGIS:
                 
 
                 # Check that all required files are present and report status
-                clean_up = locate_ep_files()
+                clean_up = self.locate_ep_files()
 
                 # Clean up if all files were located
                 if all(clean_up.values()):
@@ -781,7 +795,6 @@ class SimstockQGIS:
 
         If no duration is specified, message will persist indefinitely.
         """
-        # TODO: Use QMessageBox
         # TODO: Include logging here to avoid having to do both manually
 
         if printout:
@@ -798,6 +811,8 @@ class SimstockQGIS:
     #     QMessageBox.information(None, "Info", "This is an info message.")
     #     QMessageBox.warning(None, "Warning", "This is a warning.")
     #     QMessageBox.critical(None, "Critical", "This is a critical error!")
+    #     # Can try self.dlg or iface.mainWindow() instead of None in 1st arg
+
     #     reply = QMessageBox.question(None, "Confirm", "Do you want to continue?", 
     #                                 QMessageBox.Yes | QMessageBox.No)
     #     if reply == QMessageBox.Yes:
@@ -830,12 +845,22 @@ class SimstockQGIS:
             - Adds results to a new layer and pushes this back to the QGIS session
         """
         
+        ### PRE-SIMSTOCK AND PRE-SIMULATION CHECKS
         # Check if initial setup worked
         # TODO: add a check instead which verifies if everything is in place for Simstock to work
         if self.initial_setup_worked is not None:
             if not self.initial_setup_worked:
                 print("Warning: Initial setup previously failed - Simstock may not function correctly.")
-        
+
+        # Check if EP exists
+        if not all(self.locate_ep_files().values()):
+            self.message_box(
+                "EnergyPlus not found. Initial Setup run?",
+                "EnergyPlus was not found.\nPlease run the Initial Setup and try again.",
+                qgislevel="critical"
+                )
+            return
+
         # Pandas check in case initial setup was not run
         try:
             _ = pd.DataFrame()
@@ -856,7 +881,8 @@ class SimstockQGIS:
                                  "attempting to run Simstock.")
             return
         
-        # Announce start of process
+
+        ### Announce start of process
         self.push_msg("Simstock running",
                       "Simstock is currently running. Please wait...",
                       qgislevel=Qgis.Info,
@@ -897,7 +923,7 @@ class SimstockQGIS:
         # Save data as csv for Simstock to read
         data = pd.DataFrame(dfdict).rename(columns={"UID":"osgb"})
         data.to_csv(os.path.join(self.plugin_dir, "sa_data.csv"))
-        
+
         
         ### SIMSTOCK
         # Import and run Simstock
@@ -1579,7 +1605,7 @@ class SimstockQGIS:
             # Unpack only if not None
             else:
                 all_results, dfs = all_resultsdfs
-            
+
             # Output full results csv in cwd for external analysis
             df_merged = reduce(lambda left, right: pd.merge(left, right, on="Date/Time", how="outer"), dfs)
             df_merged = df_merged[["Date/Time"]+sorted(list(df_merged.columns)[1:])] #TODO: could sort by UID instead
